@@ -25,4 +25,4 @@ bm = BlockNLPModel(blk, vcat(A, b), λ0 = 0.0)
 # Solve using dual decomposition
 dual_decomposition(bm)
 # Solve the full-space problem with Ipopt
-# stats = ipopt(FullSpace(bm))
+stats = ipopt(FullSpace(bm))
