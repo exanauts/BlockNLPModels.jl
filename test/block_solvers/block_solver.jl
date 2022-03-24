@@ -1,3 +1,6 @@
+using BlockNLPModels
+using NLPModels, Ipopt, SolverCore
+
 const ipopt_statuses = Dict(
   0 => :first_order,
   1 => :acceptable,
@@ -21,7 +24,7 @@ const ipopt_statuses = Dict(
   -199 => :exception, # Internal error
 )
 
-function block_grad!(nlp::MathOptNLPModel, x::AbstractVector, g::AbstractVector, λ::Float64, a::Float64)
+function NLPModelsJuMP.grad!(nlp::MathOptNLPModel, x::AbstractVector, g::AbstractVector, λ::Float64, a::Float64)
   increment!(nlp, :neval_grad)
   if nlp.obj.type == "LINEAR"
     g .= nlp.obj.gradient
@@ -37,17 +40,17 @@ function block_grad!(nlp::MathOptNLPModel, x::AbstractVector, g::AbstractVector,
   return g
 end
 
-function block_obj(nlp::MathOptNLPModel, x::AbstractVector, λ::Float64, a::Float64)
+function NLPModelsJuMP.obj(nlp::MathOptNLPModel, x::AbstractVector, λ::Float64, a::Float64)
   n, m = nlp.meta.nvar, nlp.meta.ncon
   d(x) = λ*a*sum(x[i] for i in 1:n)
   return obj(nlp, x) + d(x)
 end
 
-function solve_dualizedblock(nlp::AbstractNLPModel, a::Float64, y::Float64; callback::Union{Function, Nothing} = nothing, kwargs...)
+function NLPModelsIpopt.ipopt(nlp::AbstractNLPModel, a::Float64, y::Float64; callback::Union{Function, Nothing} = nothing, kwargs...)
   n, m = nlp.meta.nvar, nlp.meta.ncon
-  eval_f(x) = block_obj(nlp, x, y, a)
+  eval_f(x) = obj(nlp, x, y, a)
   eval_g(x, g) = m > 0 ? cons!(nlp, x, g) : zeros(0)
-  eval_grad_f(x, g) = block_grad!(nlp, x, g, y, a)
+  eval_grad_f(x, g) = grad!(nlp, x, g, y, a)
   eval_jac_g(x, rows::Vector{Int32}, cols::Vector{Int32}, values) = begin
     nlp.meta.ncon == 0 && return
     if values == nothing
