@@ -3,14 +3,14 @@ module BlockNLPModels
 using NLPModels
 using LinearAlgebra
 
-export AbstractBlockNLP
+export AbstractBlockNLPModel
 export BlockNLPModel
 export DualizedNLPblockModel
 export FullSpaceModel
 
-abstract type AbstractBlockNLP end
+abstract type AbstractBlockNLPModel end
 
-mutable struct BlockNLPModel{T<:AbstractNLPModel} <: AbstractBlockNLP
+mutable struct BlockNLPModel{T<:AbstractNLPModel} <: AbstractBlockNLPModel
   blocks::Vector{T}
   linkconstraints::Vector{Float64}
 end

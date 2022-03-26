@@ -1,7 +1,7 @@
 using BlockNLPModels
 using NLPModelsIpopt
 
-function dual_decomposition(m::AbstractBlockNLP)
+function dual_decomposition(m::AbstractBlockNLPModel)
     N = length(m.blocks) # Number of blocks
     iter_count = 0
     max_iter = 100

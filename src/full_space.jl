@@ -4,10 +4,10 @@ using NLPModels
 mutable struct FullSpaceModel{T, S} <: AbstractNLPModel{T, S}
   meta::NLPModelMeta{T, S}
   counters::Counters
-  blocknlp::AbstractBlockNLP
+  blocknlp::AbstractBlockNLPModel
 end
 
-function FullSpaceModel(::Type{T}, m::AbstractBlockNLP) where {T}
+function FullSpaceModel(::Type{T}, m::AbstractBlockNLPModel) where {T}
     nb = length(m.blocks)
     l_con::Vector{Float64} = []
     u_con::Vector{Float64} = []
@@ -35,7 +35,7 @@ function FullSpaceModel(::Type{T}, m::AbstractBlockNLP) where {T}
   return FullSpaceModel(meta, Counters(), m)
 end
 
-FullSpaceModel(m::AbstractBlockNLP) = FullSpaceModel(Float64, m)
+FullSpaceModel(m::AbstractBlockNLPModel) = FullSpaceModel(Float64, m)
 
 function NLPModels.obj(nlp::FullSpaceModel, x::AbstractVector)
     nb = length(nlp.blocknlp.blocks)
