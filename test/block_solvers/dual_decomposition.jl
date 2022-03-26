@@ -1,4 +1,5 @@
 using BlockNLPModels
+using NLPModelsIpopt
 
 function dual_decomposition(m::AbstractBlockNLP)
     N = length(m.blocks) # Number of blocks
@@ -6,7 +7,7 @@ function dual_decomposition(m::AbstractBlockNLP)
     max_iter = 100
 
     # Get the intial dual variable value
-    y = m.λ
+    y = 0.0
 
     # Provide dual update step size
     t = 0.1
@@ -17,9 +18,11 @@ function dual_decomposition(m::AbstractBlockNLP)
     while iter_count <= max_iter
         iter_count += 1
         for i in 1:N
-            x[i] = ipopt(m.blocks[i], m.linkconstraints[i], y, print_level = 0).solution[1]
+            dualized_block = DualizedNLPblockModel(m.blocks[i], [y], [m.linkconstraints[i]])
+            x[i] = ipopt(dualized_block, print_level = 0).solution[1]
         end
         y += t*(sum(m.linkconstraints[j]*x[j] for j = 1:B) - m.linkconstraints[B+1])
     end
-    println("Primal Solution: ", x)
+    # TODO: Introduce verbosity parameter and make available more output options
+    return x
 end  

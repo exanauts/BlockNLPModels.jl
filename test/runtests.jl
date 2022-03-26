@@ -3,10 +3,9 @@ using NLPModels
 using NLPModelsJuMP
 using NLPModelsIpopt
 using BlockNLPModels
+using Test
 
 include("block_solvers/dual_decomposition.jl")
-include("block_solvers/block_solver.jl")
-include("block_solvers/full_space.jl")
 
 # Generate a test problem
 rng= MersenneTwister(1234)
@@ -24,10 +23,12 @@ for i in 1:B
 end
 A = ones(Float64, B)
 b = rand(rng, 100*B:500*B)/100
-block_model = BlockNLPModel(blocks, vcat(A, b), λ0 = 0.0)
+block_model = BlockNLPModel(blocks, vcat(A, b))
 
 # Solve using dual decomposition
-dual_decomposition(block_model)
+solution = dual_decomposition(block_model)
 
 # Solve the full-space problem with Ipopt
-stats = ipopt(FullSpaceModel(block_model))
+stats = ipopt(FullSpaceModel(block_model), print_level = 0)
+
+@test isapprox(stats.solution, solution) 
