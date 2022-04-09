@@ -75,7 +75,7 @@ A data type to store linear link constraints of the form
 \\end{aligned}
 """
 mutable struct LinearLinkConstraint <: AbstractLinearLinkConstraint
-  linking_blocks::Vector{SparseMatrixCSC{Float64,Int}} # linking_matrices[i] will give out the corresponsing A_i
+  linking_blocks::Vector{SparseMatrixCSC{Float64,Int}}
   idx::UnitRange{Int}
   link_map::Dict{Int, Vector{Int}} # constraint => blocks, i.e., which constraint connects which blocks
   RHS_vector::Vector{Float64}
