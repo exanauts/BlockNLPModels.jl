@@ -1,3 +1,8 @@
+"""
+    DualizedNLPblockModel{T, S} <: AbstractNLPModel{T, S}   
+
+A data type to store dualized subproblems. 
+"""
 mutable struct DualizedNLPblockModel{T, S} <: AbstractNLPModel{T, S}
   meta::NLPModelMeta{T, S}
   counters::Counters
@@ -6,6 +11,20 @@ mutable struct DualizedNLPblockModel{T, S} <: AbstractNLPModel{T, S}
   A::AbstractArray # linking matrices
 end
 
+"""
+    DualizedNLPblockModel(
+      nlp::AbstractNLPModel, 
+      λ::AbstractVector, 
+      A::AbstractArray
+      )
+
+Modifies a subproblem by dualizing the linking constraints.
+
+# Arguments
+- `nlp::AbstractNLPModel`: the subproblem 
+- `λ::AbstractVector`: vector of dual variables
+- `A::AbstractArray`: block linking matrix corresponding to the subproblem `nlp`
+"""
 function DualizedNLPblockModel(nlp::AbstractNLPModel, λ::AbstractVector, A::AbstractArray)
   meta = nlp.meta
   return DualizedNLPblockModel(meta, Counters(), nlp, λ, A)
@@ -19,7 +38,7 @@ end
 
 function NLPModels.grad!(nlp::DualizedNLPblockModel, x::AbstractVector, g::AbstractVector)
   grad!(nlp.problem_block, x, g)
-  g .+= nlp.λ'*nlp.A
+  g .+= nlp.A'*nlp.λ
   return g
 end
 
