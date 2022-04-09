@@ -11,12 +11,30 @@ export FullSpaceModel
 export add_block
 export add_links
 
+"""
+    AbstractBlockNLPModel
+Abstract supertype for the definition of NLP problems with a block structure.
+"""
 abstract type AbstractBlockNLPModel end
+
+"""
+    AbstractLinearLinkConstraint
+Abstract supertype for the definition of linear linking constraints
+"""
 abstract type AbstractLinearLinkConstraint end
+
+"""
+    AbstractNLLinkConstraint
+Abstract supertype for the definition of nonlinear linking constraints
+"""
 abstract type AbstractNLLinkConstraint end
+
 include("utils.jl")
 
-# To keep a count of different objects attached to the model
+"""
+  BlockNLP_Counters()
+Keeps a count of blocks, linking constraints, variables, and (block) constraints attached to the model.
+"""
 mutable struct BlockNLP_Counters
   block_counter::Int
   link_counter::Int
@@ -27,6 +45,16 @@ mutable struct BlockNLP_Counters
   end    
 end
 
+"""
+    AbstractBlockModel{T, S} <: AbstractNLPModel{T, S}    
+A data type to store block subproblems of the form
+```math
+\\begin{aligned}
+  \\min_{x \\in \\mathbb{R^{m_i}}} \\quad & f_i(x_i) \\\\
+  \\mathrm{subject \\, to} \\quad & c_{ij} (x_i) \\leq 0 \\quad \\forall j \\in \\mathcal{C}_i, \\\\
+\\end{aligned}
+where ``i`` is the index of the block.
+"""
 mutable struct AbstractBlockModel{T, S} <: AbstractNLPModel{T, S}
   meta::NLPModelMeta{T, S}
   counters::Counters
@@ -37,6 +65,15 @@ mutable struct AbstractBlockModel{T, S} <: AbstractNLPModel{T, S}
   linking_constraint_id::Vector{Int} # ID of linking constraints that connect this block with other blocks 
 end
 
+
+"""
+    LinearLinkConstraint <: AbstractLinearLinkConstraint
+A data type to store linear link constraints of the form
+```math
+\\begin{aligned}
+  \\sum\\limits_{i \\in \\mathcal{B}} A_i x_i = b
+\\end{aligned}
+"""
 mutable struct LinearLinkConstraint <: AbstractLinearLinkConstraint
   linking_blocks::Vector{SparseMatrixCSC{Float64,Int}} # linking_matrices[i] will give out the corresponsing A_i
   idx::UnitRange{Int}
@@ -47,6 +84,23 @@ end
 mutable struct NLLinkConstraint <: AbstractNLLinkConstraint
 end
 
+"""
+    BlockNLPModel <: AbstractBlockNLPModel
+A data type designed to store nonlinear optimization models of the form
+```math
+\\begin{aligned}
+  \\min_{x \\in \\mathbb{R^{m_i}}} \\quad & \\sum\\limits_{i \\in \\mathcal{B}} f_i(x_i) \\\\
+  \\mathrm{subject \\, to} \\quad & c_{ij} (x_i) \\leq 0 \\quad \\forall i \\in \\mathcal{B}, j \\in \\mathcal{C}_i \\\\
+  & \\sum\\limits_{i \\in \\mathcal{B}} A_i x_i = b,
+\\end{aligned}
+where ``\\mathcal{B}`` is the set of variable blocks.
+
+---
+
+    BlockNLPModel()
+
+Initializes an empty `BlockNLPModel`. 
+"""
 mutable struct BlockNLPModel <: AbstractBlockNLPModel
   problem_size::BlockNLP_Counters
   blocks::Vector{AbstractBlockModel}
@@ -60,6 +114,20 @@ mutable struct BlockNLPModel <: AbstractBlockNLPModel
   end
 end
 
+"""
+  add_block(
+    block_nlp::AbstractBlockNLPModel, 
+    nlp::AbstractNLPModel
+  )
+
+Adds a block subproblem to a `BlockNLPModel`.
+The `BlockNLPModel` needs to be initialized before this function can be called.
+
+# Arguments
+
+- `block_nlp::AbstractBlockNLPModel`: name of the BlockNLPModel to which a subproblem is to be added.
+- `nlp::AbstractNLPModel`: the subproblem.
+"""
 function add_block(block_nlp::AbstractBlockNLPModel, nlp::AbstractNLPModel)
   block_nlp.problem_size.block_counter += 1
 
@@ -74,7 +142,23 @@ function add_block(block_nlp::AbstractBlockNLPModel, nlp::AbstractNLPModel)
   nlp, block_nlp.problem_size.block_counter, var_idx, con_idx, Vector{Int}()))
 end
 
-# This function must be called after blocks have been added
+"""
+    add_links(block_nlp::AbstractBlockNLPModel, 
+    n_constraints::Int,   
+    links::Union{Dict{Int, Array{Float64, 2}}, Dict{Int, Vector{Float64}}}, 
+    constants::Union{AbstractVector, Float64})
+
+Creates linear link constraint(s) between different subproblems of the BlockNLPModel.
+This function must be called after subproblems have already been added.
+
+# Arguments
+
+- `block_nlp::AbstractBlockNLPModel`: The BlockNLPModel to which the constraint(s) is to be added.  
+- `n_constraints::Int`: Number of link constraints. 
+- `links::Union{Dict{Int, Array{Float64, 2}}, Dict{Int, Vector{Float64}}}`: coefficients of the block matrices that link different blocks,
+- `constants::Union{AbstractVector, Float64}`: RHS vector
+"""
+# 
 function add_links(block_nlp::AbstractBlockNLPModel, n_constraints::Int, 
   links::Union{Dict{Int, Array{Float64, 2}}, Dict{Int, Vector{Float64}}}, 
   constants::Union{AbstractVector, Float64})
