@@ -14,6 +14,7 @@ export add_links
 abstract type AbstractBlockNLPModel end
 abstract type AbstractLinearLinkConstraint end
 abstract type AbstractNLLinkConstraint end
+include("utils.jl")
 
 # To keep a count of different objects attached to the model
 mutable struct BlockNLP_Counters
@@ -33,7 +34,7 @@ mutable struct AbstractBlockModel{T, S} <: AbstractNLPModel{T, S}
   idx::Int
   var_idx::UnitRange{Int} # Indices of variables wrt the full space model
   con_idx::UnitRange{Int} # Indices of constraints wrt the full space model
-  linking_constraints::Vector{Int} # ID of linking constraints that connect this block with other blocks 
+  linking_constraint_id::Vector{Int} # ID of linking constraints that connect this block with other blocks 
 end
 
 mutable struct LinearLinkConstraint <: AbstractLinearLinkConstraint
@@ -66,7 +67,7 @@ function add_block(block_nlp::AbstractBlockNLPModel, nlp::AbstractNLPModel)
   block_nlp.problem_size.var_counter += nlp.meta.nvar
   var_idx = temp:block_nlp.problem_size.var_counter
 
-  temp = deepcopy(block_nlp.problem_size.con_counter) # number of constraints in a block can be zero
+  temp = deepcopy(block_nlp.problem_size.con_counter)+1 
   block_nlp.problem_size.con_counter += nlp.meta.ncon
   con_idx = temp:block_nlp.problem_size.con_counter
   push!(block_nlp.blocks, AbstractBlockModel(nlp.meta, Counters(), 
@@ -106,6 +107,7 @@ function add_links(block_nlp::AbstractBlockNLPModel, n_constraints::Int,
   # Prepare other information
   link_map = Dict{Int, Vector{Int}}()
   link_con_idx = Vector{Int}()
+
   # Parse the constraints one-by-one to collect this information
   temp = block_nlp.problem_size.link_counter+1
   for con in 1:n_constraints
@@ -113,7 +115,7 @@ function add_links(block_nlp::AbstractBlockNLPModel, n_constraints::Int,
       link_map[block_nlp.problem_size.link_counter] = Vector{Int}()
       for block_idx in keys(links)
           if linking_blocks[block_idx][con, :] != spzeros(block_nlp.blocks[block_idx].meta.nvar)
-              push!(block_nlp.blocks[block_idx].linking_constraints, block_nlp.problem_size.link_counter)
+              push!(block_nlp.blocks[block_idx].linking_constraint_id, block_nlp.problem_size.link_counter)
               push!(link_map[block_nlp.problem_size.link_counter], block_idx)
           end
       end
