@@ -1,9 +1,25 @@
+"""
+    FullSpaceModel{T, S} <: AbstractNLPModel{T, S}   
+
+A data type to store the full space `BlockNLPModel` as an `AbstractNLPModel`.
+"""
 mutable struct FullSpaceModel{T, S} <: AbstractNLPModel{T, S}
     meta::NLPModelMeta{T, S}
     counters::Counters
     blocknlp::AbstractBlockNLPModel
   end
-  
+
+"""
+FullSpaceModel(
+    ::Type{T}, m::AbstractBlockNLPModel
+    ) where {T}
+
+Converts a `BlockNLPModel` to a `AbstractNLPModel` that can be solved with any standard NLP solver.
+
+# Arguments
+
+- `m::AbstractBlockNLPModel`: name of the BlockNLPModel
+"""
 function FullSpaceModel(::Type{T}, m::AbstractBlockNLPModel) where {T}
     nb = m.problem_size.block_counter
     n_var = sum(m.blocks[i].meta.nvar for i in 1:nb)
@@ -16,8 +32,8 @@ function FullSpaceModel(::Type{T}, m::AbstractBlockNLPModel) where {T}
             u_con = vcat(u_con, m.blocks[i].meta.ucon)
         end
     end
-    l_con = vcat(l_con, m.linking_constraints.RHS_vector)
-    u_con = vcat(u_con, m.linking_constraints.RHS_vector)
+    l_con = vcat(l_con, get_RHSvector(m))
+    u_con = vcat(u_con, get_RHSvector(m))
 
     l_var::Vector{Float64} = []
     u_var::Vector{Float64} = []
@@ -71,11 +87,11 @@ cols::AbstractVector{T}) where {T}
     @lencheck nlp.meta.nnzh rows cols
     H = spzeros(nlp.meta.nvar, nlp.meta.nvar)
     for i in 1:nb
-    H[nlp.blocknlp.blocks[i].var_idx, nlp.blocknlp.blocks[i].var_idx] = 
-    sparse(hess_structure(nlp.blocknlp.blocks[i].problem_block[1]), 
-    hess_structure(nlp.blocknlp.blocks[i].problem_block[1]), 
-    ones(nlp.blocknlp.blocks[i].meta.nnzh), 
-    nlp.blocknlp.blocks[i].meta.nvar, nlp.blocknlp.blocks[i].meta.nvar)
+        H[nlp.blocknlp.blocks[i].var_idx, nlp.blocknlp.blocks[i].var_idx] = 
+        sparse(hess_structure(nlp.blocknlp.blocks[i].problem_block)[1], 
+        hess_structure(nlp.blocknlp.blocks[i].problem_block)[2], 
+        ones(nlp.blocknlp.blocks[i].meta.nnzh), 
+        nlp.blocknlp.blocks[i].meta.nvar, nlp.blocknlp.blocks[i].meta.nvar)
     end
     rows, cols, dummy_vals = findnz(H)
     return rows, cols
@@ -91,6 +107,8 @@ obj_weight = one(T),
     @lencheck nlp.meta.nvar x
     @lencheck nlp.meta.nnzh vals
     increment!(nlp, :neval_hess)
+
+    H = spzeros(nlp.meta.nvar, nlp.meta.nvar)
     for i in 1:nb
     H[nlp.blocknlp.blocks[i].var_idx, nlp.blocknlp.blocks[i].var_idx] = 
     sparse(hess_structure(nlp.blocknlp.blocks[i].problem_block)[1], 
