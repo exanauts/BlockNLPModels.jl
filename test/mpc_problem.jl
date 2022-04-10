@@ -64,34 +64,24 @@ for i in 1:2N
 end
 
 # Add linking constraints all at once
-links = Dict(1=>G[:, 1:m])
-links[2] = G[:, m+1:m+n]
+links = Dict(1=>Matrix(G[:, 1:m]))
+links[2] = Matrix(G[:, m+1:m+n])
 count = 3
 for i = 2:N
     for j = 1:2
         global count
         if count%2 != 0
-            links[count] = G[:, (i-1)*(m+n)+1:(i-1)*(m+n)+m]
+            links[count] = Matrix(G[:, (i-1)*(m+n)+1:(i-1)*(m+n)+m])
             count += 1
         else
-            links[count] = G[:, (i-1)*(m+n)+m+1:(i-1)*(m+n)+m+n]
+            links[count] = Matrix(G[:, (i-1)*(m+n)+m+1:(i-1)*(m+n)+m+n])
             count += 1
         end
     end
 end
-add_links(block_mpc, N*n, links, sparsevec(F*x0))
-# tm = FullSpaceModel(block_mpc)
+add_links(block_mpc, N*n, links, F*x0)
+fs = FullSpaceModel(block_mpc)
 
-# Add links one-by-one
-# N = 2
-# println(sparsevec(F*x0)[1])
-# for i = 1:N
-#     global links
-#     if i == 1
-#         links = Dict(1=>G[1:n, 1:m], 2=>G[1:n, m+1:m+n])
-#         add_links(block_mpc, n, links, sparsevec(F*x0)[1:3])
-#     else
-#         links = Dict(2=>G[n+1:2n, m+1:m+n], 3=>G[n+1:2n, m+n+1:2m+n], 4=>G[n+1:2n, 2m+n+1:2m+2n])
-#         add_links(block_mpc, n, links, sparsevec(F*x0)[4:6])
-#     end
-# end
+# Solve using dual decomposition
+solution = dual_decomposition(block_mpc)
+
