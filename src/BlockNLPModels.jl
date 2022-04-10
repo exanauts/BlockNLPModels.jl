@@ -8,8 +8,7 @@ export AbstractBlockNLPModel
 export BlockNLPModel
 export DualizedNLPblockModel
 export FullSpaceModel
-export add_block
-export add_links
+export add_block, add_links, n_tot_con, get_blockmatrix, get_matrixblocks, get_RHSvector
 
 """
     AbstractBlockNLPModel
