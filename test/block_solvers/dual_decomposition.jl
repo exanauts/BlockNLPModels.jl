@@ -15,7 +15,6 @@ Implements the dual decomposition algorithm on `BlockNLPModel`.
 - `max_iter::Int = 100`: total number of dual decomposition iterations (optional) 
 - `step_size::Float64 = 0.1`: dual update step size (optional)
 """
-
 function dual_decomposition(m::AbstractBlockNLPModel; max_iter::Int = 100, step_size::Float64 = 0.1)
     N = m.problem_size.block_counter # Number of blocks
     iter_count = 0
