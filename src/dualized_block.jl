@@ -1,9 +1,9 @@
 """
-    DualizedNLPblockModel{T, S} <: AbstractNLPModel{T, S}   
+    DualizedNLPBlockModel{T, S} <: AbstractNLPModel{T, S}   
 
 A data type to store dualized subproblems. 
 """
-mutable struct DualizedNLPblockModel{T, S} <: AbstractNLPModel{T, S}
+mutable struct DualizedNLPBlockModel{T, S} <: AbstractNLPModel{T, S}
   meta::NLPModelMeta{T, S}
   counters::Counters
   problem_block::AbstractNLPModel
@@ -12,7 +12,7 @@ mutable struct DualizedNLPblockModel{T, S} <: AbstractNLPModel{T, S}
 end
 
 """
-    DualizedNLPblockModel(
+    DualizedNLPBlockModel(
       nlp::AbstractNLPModel, 
       λ::AbstractVector, 
       A::AbstractArray
@@ -25,29 +25,28 @@ Modifies a subproblem by dualizing the linking constraints.
 - `λ::AbstractVector`: vector of dual variables
 - `A::AbstractArray`: block linking matrix corresponding to the subproblem `nlp`
 """
-function DualizedNLPblockModel(nlp::AbstractNLPModel, λ::AbstractVector, A::AbstractArray)
+function DualizedNLPBlockModel(nlp::AbstractNLPModel, λ::AbstractVector, A::AbstractArray)
   meta = nlp.meta
-  return DualizedNLPblockModel(meta, Counters(), nlp, λ, A)
+  return DualizedNLPBlockModel(meta, Counters(), nlp, λ, A)
 end
 
-function NLPModels.obj(nlp::DualizedNLPblockModel, x::AbstractVector)
+function NLPModels.obj(nlp::DualizedNLPBlockModel, x::AbstractVector)
   n = nlp.problem_block.meta.nvar
-  d(x) = dot(nlp.λ, nlp.A, x)
-  return obj(nlp.problem_block, x) + d(x)
+  return obj(nlp.problem_block, x) + dot(nlp.λ, nlp.A, x)
 end
 
-function NLPModels.grad!(nlp::DualizedNLPblockModel, x::AbstractVector, g::AbstractVector)
+function NLPModels.grad!(nlp::DualizedNLPBlockModel, x::AbstractVector, g::AbstractVector)
   grad!(nlp.problem_block, x, g)
   g .+= nlp.A'*nlp.λ
   return g
 end
 
-function NLPModels.hess_structure!(nlp::DualizedNLPblockModel, rows::AbstractVector{T}, cols::AbstractVector{T}) where {T}
+function NLPModels.hess_structure!(nlp::DualizedNLPBlockModel, rows::AbstractVector{T}, cols::AbstractVector{T}) where {T}
   return hess_structure!(nlp.problem_block, rows, cols)
 end
 
 function NLPModels.hess_coord!(
-  nlp::DualizedNLPblockModel,
+  nlp::DualizedNLPBlockModel,
   x::AbstractVector{T},
   vals::AbstractVector{T};
   obj_weight = one(T),
@@ -56,7 +55,7 @@ function NLPModels.hess_coord!(
 end
 
 function NLPModels.hess_coord!(
-  nlp::DualizedNLPblockModel,
+  nlp::DualizedNLPBlockModel,
   x::AbstractVector{T},
   y::AbstractVector{T},
   vals::AbstractVector{T};
@@ -65,14 +64,14 @@ function NLPModels.hess_coord!(
   return hess_coord!(nlp.problem_block, x, y, vals, obj_weight = obj_weight)
 end
 
-function NLPModels.cons!(nlp::DualizedNLPblockModel, x::AbstractVector, cx::AbstractVector)
+function NLPModels.cons!(nlp::DualizedNLPBlockModel, x::AbstractVector, cx::AbstractVector)
   return cons!(nlp.problem_block, x, cx)
 end
 
-function NLPModels.jac_structure!(nlp::DualizedNLPblockModel, rows::AbstractVector{T}, cols::AbstractVector{T}) where {T}
-  return jac.structure!(nlp.problem_block, rows, cols)
+function NLPModels.jac_structure!(nlp::DualizedNLPBlockModel, rows::AbstractVector{T}, cols::AbstractVector{T}) where {T}
+  return jac_structure!(nlp.problem_block, rows, cols)
 end
 
-function NLPModels.jac_coord!(nlp::DualizedNLPblockModel, x::AbstractVector, vals::AbstractVector)
+function NLPModels.jac_coord!(nlp::DualizedNLPBlockModel, x::AbstractVector, vals::AbstractVector)
   return jac_coord!(nlp.problem_block, x, vals)
 end

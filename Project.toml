@@ -16,6 +16,8 @@ NLPModelsJuMP = "792afdf1-32c1-5681-94e0-d7bf7a5df49e"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 SolverCore = "ff4d7338-4cf1-434d-91df-b86cb86fb843"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+MadNLP = "2621e9c9-9eb4-46b1-8089-e8c72242dfb6"
 
 [targets]
-test = ["Ipopt", "JuMP", "NLPModelsIpopt", "NLPModelsJuMP", "Random", "SolverCore", "Test"]
+test = ["Ipopt", "JuMP", "NLPModelsIpopt", "NLPModelsJuMP", "Random", "SolverCore", "Test", "LinearAlgebra", "MadNLP"]
