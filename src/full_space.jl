@@ -58,141 +58,6 @@ function FullSpaceModel(m::AbstractBlockNLPModel)
     return FullSpaceModel(meta, Counters(), m)
 end
 
-"""
-    get_hessian(
-        m::FullSpaceModel; 
-        x::Union{AbstractVector, Nothing} = nothing, 
-        obj_weight::Union{AbstractVector, Nothing} = nothing, 
-        y::Union{AbstractVector, Nothing} = nothing
-    )
-Returns the Hessian for a `FullSpaceModel` as a sparse matrix.
-This function fills the nonzero entries of the Hessian matrix with ones if an `x` is not specified.
-
-# Arguments
-- `m::FullSpaceModel`: the full space model 
-- `x::Union{AbstractVector, Nothing}`: current primal solution (optional)
-- `obj_weight::Union{AbstractVector, Nothing}`: objective weight
-- `y::Union{AbstractVector, Nothing}`: vector of dual variables
-"""
-function get_hessian(
-    m::FullSpaceModel; 
-    x::Union{AbstractVector, Nothing} = nothing, 
-    obj_weight::Union{Number, Nothing} = nothing, 
-    y::Union{AbstractVector, Nothing} = nothing
-    )
-
-    nb = m.blocknlp.problem_size.block_counter
-    H = spzeros(m.meta.nvar, m.meta.nvar)
-    for i in 1:nb
-        block = m.blocknlp.blocks[i]
-
-        H[block.var_idx, block.var_idx] = 
-        sparse(
-            hess_structure(block.problem_block)[1], 
-            hess_structure(block.problem_block)[2], 
-            ones(block.meta.nnzh), 
-            block.meta.nvar, 
-            block.meta.nvar
-        )
-    end
-    rows, cols, temp_vals = findnz(H)
-    if x === nothing
-        return rows, cols
-    else
-        for i in 1:nb
-            block = m.blocknlp.blocks[i]
-
-            if block.meta.ncon > 0
-                H[block.var_idx, block.var_idx] = 
-                sparse(
-                    hess_structure(block.problem_block)[1], 
-                    hess_structure(block.problem_block)[2], 
-                    hess_coord(
-                        block.problem_block, 
-                        x[block.var_idx], 
-                        y[block.con_idx], 
-                        obj_weight = obj_weight
-                    ), 
-                    block.meta.nvar, 
-                    block.meta.nvar
-                )
-            else
-                H[block.var_idx, block.var_idx] = 
-                sparse(
-                    hess_structure(block.problem_block)[1], 
-                    hess_structure(block.problem_block)[2], 
-                    hess_coord(
-                        block.problem_block, 
-                        x[block.var_idx], 
-                        obj_weight = obj_weight
-                    ), 
-                    block.meta.nvar, 
-                    block.meta.nvar
-                )
-            end        
-        end
-        vals = zeros(Float64, length(rows))
-        for i in 1:length(rows)
-            vals[i] = H[rows[i], cols[i]]
-        end
-        return vals
-    end
-end
-
-"""
-    get_jacobian(
-        m::FullSpaceModel; 
-        x::Union{AbstractVector, Nothing} = nothing 
-    )
-Returns the Jacobian for a `FullSpaceModel` as a sparse matrix.
-This function fills the nonzero entries of the Hessian matrix with ones if an `x` is not specified.
-
-# Arguments
-- `m::FullSpaceModel`: the full space model 
-- `x::Union{AbstractVector, Nothing}`: current primal solution (optional)
-"""
-function get_jacobian(m::FullSpaceModel; x::Union{AbstractVector, Nothing} = nothing)
-    nb = m.blocknlp.problem_size.block_counter
-    J = spzeros(n_constraints(m.blocknlp), m.blocknlp.problem_size.var_counter)
-    J[m.blocknlp.problem_size.con_counter+1:end, :] = get_linking_matrix(m.blocknlp)
-    for i in 1:nb
-        block = m.blocknlp.blocks[i]
-        if block.meta.ncon > 0
-            J[block.con_idx, block.var_idx] = 
-            sparse(
-                jac_structure(block.problem_block)[1], 
-                jac_structure(block.problem_block)[2], 
-                ones(block.meta.nnzj), 
-                block.meta.ncon, 
-                block.meta.nvar
-            )
-        end
-    end
-    rows, cols, temp_vals = findnz(J)
-    if x === nothing
-        return rows, cols
-    else
-        for i in 1:nb
-            block = m.blocknlp.blocks[i]
-            if block.meta.ncon > 0
-                J[block.con_idx, block.var_idx] = 
-                sparse(
-                    jac_structure(block.problem_block)[1], 
-                    jac_structure(block.problem_block)[2], 
-                    jac_coord(block.problem_block, x[block.var_idx]), 
-                    block.meta.ncon, 
-                    block.meta.nvar
-                )
-            end
-        end
-        vals = zeros(Float64, length(rows))
-        for i in 1:length(rows)
-            vals[i] = J[rows[i], cols[i]]
-        end
-        return vals
-    end
-end
-
 function NLPModels.obj(nlp::FullSpaceModel, x::AbstractVector)
     nb = nlp.blocknlp.problem_size.block_counter
     @lencheck nlp.meta.nvar x
@@ -206,8 +71,8 @@ function NLPModels.grad!(nlp::FullSpaceModel, x::AbstractVector, gx::AbstractVec
     @lencheck nlp.meta.nvar x gx
     increment!(nlp, :neval_grad)
     for i in 1:nb
-        gx[nlp.blocknlp.blocks[i].var_idx] = 
-        grad(nlp.blocknlp.blocks[i].problem_block, x[nlp.blocknlp.blocks[i].var_idx])
+        v = @view gx[nlp.blocknlp.blocks[i].var_idx]
+        grad!(nlp.blocknlp.blocks[i].problem_block, x[nlp.blocknlp.blocks[i].var_idx], v)
     end
     return gx
 end
@@ -219,7 +84,17 @@ function NLPModels.hess_structure!(
     ) where {T}
     nb = nlp.blocknlp.problem_size.block_counter
     @lencheck nlp.meta.nnzh rows cols
-    rows, cols = get_hessian(nlp)
+    idx = 0
+    for i in 1:nb
+        block = nlp.blocknlp.blocks[i]
+        temp_idx = idx+1
+        idx += block.meta.nnzh
+        v1 = @view rows[temp_idx:idx]
+        v2 = @view cols[temp_idx:idx]
+        hess_structure!(block.problem_block, v1, v2)
+        v1 .+= (block.var_idx[1] - 1)
+        v2 .+= (block.var_idx[1] - 1)
+    end
     return rows, cols
 end
 
@@ -233,7 +108,14 @@ obj_weight = one(T),
     @lencheck nlp.meta.nvar x
     @lencheck nlp.meta.nnzh vals
     increment!(nlp, :neval_hess)
-    vals = get_hessian(nlp, x = x, obj_weight = obj_weight)
+    idx = 0
+    for i in 1:nb
+        block = nlp.blocknlp.blocks[i]
+        temp_idx = idx+1
+        idx += block.meta.nnzh
+        v = @view vals[temp_idx:idx]
+        hess_coord!(block.problem_block, x[block.var_idx], v, obj_weight = obj_weight)
+    end
     return vals
 end
 
@@ -249,7 +131,21 @@ function NLPModels.hess_coord!(
     @lencheck nlp.meta.nnzh vals
     @lencheck nlp.meta.ncon y
     increment!(nlp, :neval_hess)
-    vals = get_hessian(nlp, x = x, y = y, obj_weight = obj_weight)
+    idx = 0
+    for i in 1:nb
+        block = nlp.blocknlp.blocks[i]
+        if block.meta.ncon == 0
+            temp_idx = idx+1
+            idx += block.meta.nnzh
+            v = @view vals[temp_idx:idx]
+            hess_coord!(block.problem_block, x[block.var_idx], v, obj_weight = obj_weight)
+        else
+            temp_idx = idx+1
+            idx += block.meta.nnzh
+            v = @view vals[temp_idx:idx]
+            hess_coord!(block.problem_block, x[block.var_idx], y[block.con_idx], v, obj_weight = obj_weight)
+        end
+    end
     return vals
 end
 
@@ -261,22 +157,37 @@ function NLPModels.cons!(nlp::FullSpaceModel, x::AbstractVector, cx::AbstractVec
     idx = 0
     for i in 1:nb
         if nlp.blocknlp.blocks[i].meta.ncon > 0
-            temp = idx+1
+            temp_idx = idx+1
             idx += nlp.blocknlp.blocks[i].meta.ncon
-            cx[temp:idx] = cons(nlp.blocknlp.blocks[i].problem_block, 
-            x[nlp.blocknlp.blocks[i].var_idx])
+            v = @view cx[temp_idx:idx]
+            cons!(nlp.blocknlp.blocks[i].problem_block, 
+            x[nlp.blocknlp.blocks[i].var_idx], v)
         end
     end
     idx += 1
     A = get_linking_matrix_blocks(nlp.blocknlp)
-    cx[idx:end] = sum(A[j]*x[nlp.blocknlp.blocks[j].var_idx] for j = 1:nb)
+    cx[idx:end] .= sum(A[j]*x[nlp.blocknlp.blocks[j].var_idx] for j = 1:nb)
     return cx
 end
 
 function NLPModels.jac_structure!(nlp::FullSpaceModel, rows::AbstractVector{T}, 
 cols::AbstractVector{T}) where {T}
     @lencheck nlp.meta.nnzj rows cols
-    rows, cols = get_jacobian(nlp)
+    nb = nlp.blocknlp.problem_size.block_counter
+    idx = 0
+    for i in 1:nb
+        block = nlp.blocknlp.blocks[i]
+        temp_idx = idx+1
+        idx += block.meta.nnzj
+        v1 = @view rows[temp_idx:idx]
+        v2 = @view cols[temp_idx:idx]
+        jac_structure!(block.problem_block, v1, v2)
+        v1 .+= (block.con_idx[1] - 1)
+        v2 .+= (block.var_idx[1] - 1)
+    end
+    r, c, v = findnz(get_linking_matrix(nlp.blocknlp))
+    rows[idx+1:end] .= r .+ nlp.blocknlp.problem_size.con_counter
+    cols[idx+1:end] .= c
     return rows, cols
 end
 
@@ -284,7 +195,17 @@ function NLPModels.jac_coord!(nlp::FullSpaceModel, x::AbstractVector, vals::Abst
     @lencheck nlp.meta.nvar x
     @lencheck nlp.meta.nnzj vals 
     increment!(nlp, :neval_jac)
-    vals = get_jacobian(nlp, x = x)
+    nb = nlp.blocknlp.problem_size.block_counter
+    idx = 0
+    for i in 1:nb
+        block = nlp.blocknlp.blocks[i]
+        temp_idx = idx+1
+        idx += block.meta.nnzj
+        v1 = @view vals[temp_idx:idx]
+        jac_coord!(block.problem_block, x[block.var_idx], v1)
+    end
+    r, c, v = findnz(get_linking_matrix(nlp.blocknlp))
+    vals[idx+1:end] .= v
     return vals
 end
   
