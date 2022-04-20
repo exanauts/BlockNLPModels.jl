@@ -10,7 +10,7 @@ export DualizedNLPBlockModel
 export AugmentedNLPBlockModel
 export FullSpaceModel
 export add_block, add_links, n_constraints,
-get_linking_matrix, get_linking_matrix_blocks, get_rhs_vector
+       get_linking_matrix, get_linking_matrix_blocks, get_rhs_vector
 
 """
     AbstractBlockNLPModel
@@ -41,7 +41,7 @@ mutable struct BlockNLPCounters
     var_counter::Int
     con_counter::Int
     function BlockNLPCounters()
-      return new(0,0,0,0)
+        return new(0,0,0,0)
     end
 end
 
@@ -103,11 +103,11 @@ mutable struct BlockNLPModel <: AbstractBlockNLPModel
     blocks::Vector{AbstractBlockModel}
     linking_constraints::Vector{Union{AbstractLinearLinkConstraint, AbstractNonLinearLinkConstraint}}
     function BlockNLPModel()
-      return new(
-        BlockNLPCounters(),
-        Vector{AbstractBlockModel}(),
-        Vector{Union{AbstractLinearLinkConstraint, AbstractNonLinearLinkConstraint}}()
-      )
+        return new(
+                   BlockNLPCounters(),
+                   Vector{AbstractBlockModel}(),
+                   Vector{Union{AbstractLinearLinkConstraint, AbstractNonLinearLinkConstraint}}()
+                  )
     end
 end
 
@@ -137,7 +137,7 @@ function add_block(block_nlp::AbstractBlockNLPModel, nlp::AbstractNLPModel)
     con_idx = temp_con_counter:block_nlp.problem_size.con_counter
 
     push!(block_nlp.blocks, AbstractBlockModel(nlp.meta, Counters(),
-    nlp, block_nlp.problem_size.block_counter, var_idx, con_idx, Vector{Int}()))
+                                               nlp, block_nlp.problem_size.block_counter, var_idx, con_idx, Vector{Int}()))
 end
 
 """
@@ -160,27 +160,28 @@ This function must be called after subproblems have already been added.
 """
 function add_links(block_nlp::AbstractBlockNLPModel, n_constraints::Int,
     links::Union{Dict{Int, Array{Float64, 2}}, Dict{Int, Vector{Float64}}},
-    constants::Union{AbstractVector, Float64})
+    constants::Union{AbstractVector, Float64},
+)
 
     # Initialize linking_blocks with empty matrices
     linking_blocks = [spzeros(n_constraints, block_nlp.blocks[i].meta.nvar)
-    for i in 1:block_nlp.problem_size.block_counter]
+                      for i in 1:block_nlp.problem_size.block_counter]
 
     # check if everything is of appropriate size and add to linking_blocks
     @assert length(constants) == n_constraints
     if n_constraints == 1
-      rhs_vector = [constants]
-      for block_idx in keys(links)
-        @assert length(links[block_idx]) == block_nlp.blocks[block_idx].meta.nvar
-        linking_blocks[block_idx][1, :] = sparse(links[block_idx])
-      end
+        rhs_vector = [constants]
+        for block_idx in keys(links)
+            @assert length(links[block_idx]) == block_nlp.blocks[block_idx].meta.nvar
+            linking_blocks[block_idx][1, :] = sparse(links[block_idx])
+        end
     else
-      rhs_vector = constants
-      for block_idx in keys(links)
-        @assert size(links[block_idx])[1] == n_constraints
-        @assert size(links[block_idx])[2] == block_nlp.blocks[block_idx].meta.nvar
-        linking_blocks[block_idx] = sparse(links[block_idx])
-      end
+        rhs_vector = constants
+        for block_idx in keys(links)
+            @assert size(links[block_idx])[1] == n_constraints
+            @assert size(links[block_idx])[2] == block_nlp.blocks[block_idx].meta.nvar
+            linking_blocks[block_idx] = sparse(links[block_idx])
+        end
     end
 
     # Prepare other information
@@ -207,4 +208,5 @@ end
 include("full_space.jl")
 include("dualized_block.jl")
 include("augmented_block.jl")
+
 end # module
