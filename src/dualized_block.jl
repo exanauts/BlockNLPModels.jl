@@ -37,7 +37,7 @@ end
 
 function NLPModels.grad!(nlp::DualizedNLPBlockModel, x::AbstractVector, g::AbstractVector)
   grad!(nlp.problem_block, x, g)
-  g .+= nlp.A'*nlp.λ
+  mul!(g, nlp.A', nlp.λ, 1, 1)  
   return g
 end
 

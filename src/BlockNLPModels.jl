@@ -23,12 +23,11 @@ abstract type AbstractBlockNLPModel end
 Abstract supertype for the definition of linear linking constraints
 """
 abstract type AbstractLinearLinkConstraint end
-
 """
-    AbstractNLLinkConstraint
+    AbstractNonLinearLinkConstraint
 Abstract supertype for the definition of nonlinear linking constraints
 """
-abstract type AbstractNLLinkConstraint end
+abstract type AbstractNonLinearLinkConstraint end
 
 include("utils.jl")
 
@@ -82,9 +81,6 @@ mutable struct LinearLinkConstraint <: AbstractLinearLinkConstraint
     rhs_vector::Vector{Float64}
 end
 
-mutable struct NLLinkConstraint <: AbstractNLLinkConstraint
-end
-
 """
     BlockNLPModel <: AbstractBlockNLPModel
 A data type designed to store nonlinear optimization models of the form
@@ -105,12 +101,12 @@ Initializes an empty `BlockNLPModel`.
 mutable struct BlockNLPModel <: AbstractBlockNLPModel
     problem_size::BlockNLPCounters
     blocks::Vector{AbstractBlockModel}
-    linking_constraints::Vector{Union{AbstractLinearLinkConstraint, AbstractNLLinkConstraint}}
+    linking_constraints::Vector{Union{AbstractLinearLinkConstraint, AbstractNonLinearLinkConstraint}}
     function BlockNLPModel()
       return new(
         BlockNLPCounters(),
         Vector{AbstractBlockModel}(),
-        Vector{Union{AbstractLinearLinkConstraint, AbstractNLLinkConstraint}}()
+        Vector{Union{AbstractLinearLinkConstraint, AbstractNonLinearLinkConstraint}}()
       )
     end
 end

@@ -83,7 +83,6 @@ function get_hessian(m::AugmentedNLPBlockModel;
     obj_weight::Union{Number, Nothing} = nothing, 
     vals::Union{AbstractVector, Nothing} = nothing)
 
-    H = spzeros(m.meta.nvar, m.meta.nvar)
     nlp = m.subproblem.problem_block
     H = sparse(
       hess_structure(nlp)[1], 
@@ -93,9 +92,9 @@ function get_hessian(m::AugmentedNLPBlockModel;
       nlp.meta.nvar
     ) + m.ρ.*abs.(m.A[:, m.subproblem.var_idx]'*m.A[:, m.subproblem.var_idx])
     rows, cols, temp_vals = findnz(H)
-    if x === nothing
+    if isnothing(x)
         return rows, cols
-    elseif y === nothing
+    elseif isnothing(y)
         H = sparse(
           hess_structure(nlp)[1], 
           hess_structure(nlp)[2], 
