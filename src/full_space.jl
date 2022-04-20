@@ -1,5 +1,5 @@
 """
-    FullSpaceModel{T, S} <: AbstractNLPModel{T, S}   
+    FullSpaceModel{T, S} <: AbstractNLPModel{T, S}
 
 A data type to store the full space `BlockNLPModel` as an `AbstractNLPModel`.
 """
@@ -45,7 +45,7 @@ function FullSpaceModel(m::AbstractBlockNLPModel)
         n_var,
         ncon = n_constraints(m),
         nnzh = sum(m.blocks[i].meta.nnzh for i in 1:nb),
-        nnzj = sum(m.blocks[i].meta.nnzj for i in 1:nb) + 
+        nnzj = sum(m.blocks[i].meta.nnzj for i in 1:nb) +
         nnz(get_linking_matrix(m)),
         x0 = zeros(Float64, n_var),
         lvar = l_var,
@@ -62,10 +62,10 @@ function NLPModels.obj(nlp::FullSpaceModel, x::AbstractVector)
     nb = nlp.blocknlp.problem_size.block_counter
     @lencheck nlp.meta.nvar x
     increment!(nlp, :neval_obj)
-    return sum(obj(nlp.blocknlp.blocks[i].problem_block, 
+    return sum(obj(nlp.blocknlp.blocks[i].problem_block,
     x[nlp.blocknlp.blocks[i].var_idx]) for i in 1:nb)
 end
-  
+
 function NLPModels.grad!(nlp::FullSpaceModel, x::AbstractVector, gx::AbstractVector)
     nb = nlp.blocknlp.problem_size.block_counter
     @lencheck nlp.meta.nvar x gx
@@ -78,8 +78,8 @@ function NLPModels.grad!(nlp::FullSpaceModel, x::AbstractVector, gx::AbstractVec
 end
 
 function NLPModels.hess_structure!(
-    nlp::FullSpaceModel, 
-    rows::AbstractVector{T}, 
+    nlp::FullSpaceModel,
+    rows::AbstractVector{T},
     cols::AbstractVector{T}
     ) where {T}
     nb = nlp.blocknlp.problem_size.block_counter
@@ -160,7 +160,7 @@ function NLPModels.cons!(nlp::FullSpaceModel, x::AbstractVector, cx::AbstractVec
             temp_idx = idx+1
             idx += nlp.blocknlp.blocks[i].meta.ncon
             v = @view cx[temp_idx:idx]
-            cons!(nlp.blocknlp.blocks[i].problem_block, 
+            cons!(nlp.blocknlp.blocks[i].problem_block,
             x[nlp.blocknlp.blocks[i].var_idx], v)
         end
     end
@@ -170,7 +170,7 @@ function NLPModels.cons!(nlp::FullSpaceModel, x::AbstractVector, cx::AbstractVec
     return cx
 end
 
-function NLPModels.jac_structure!(nlp::FullSpaceModel, rows::AbstractVector{T}, 
+function NLPModels.jac_structure!(nlp::FullSpaceModel, rows::AbstractVector{T},
 cols::AbstractVector{T}) where {T}
     @lencheck nlp.meta.nnzj rows cols
     nb = nlp.blocknlp.problem_size.block_counter
@@ -195,7 +195,7 @@ end
 
 function NLPModels.jac_coord!(nlp::FullSpaceModel, x::AbstractVector, vals::AbstractVector)
     @lencheck nlp.meta.nvar x
-    @lencheck nlp.meta.nnzj vals 
+    @lencheck nlp.meta.nnzj vals
     increment!(nlp, :neval_jac)
     nb = nlp.blocknlp.problem_size.block_counter
     idx = 0
@@ -212,5 +212,4 @@ function NLPModels.jac_coord!(nlp::FullSpaceModel, x::AbstractVector, vals::Abst
     vals[idx+1:end] .= v
     return vals
 end
-  
-  
+

@@ -9,7 +9,7 @@ export BlockNLPModel
 export DualizedNLPBlockModel
 export AugmentedNLPBlockModel
 export FullSpaceModel
-export add_block, add_links, n_constraints, 
+export add_block, add_links, n_constraints,
 get_linking_matrix, get_linking_matrix_blocks, get_rhs_vector
 
 """
@@ -42,11 +42,11 @@ mutable struct BlockNLPCounters
     con_counter::Int
     function BlockNLPCounters()
       return new(0,0,0,0)
-    end    
+    end
 end
 
 """
-    AbstractBlockModel{T, S} <: AbstractNLPModel{T, S}    
+    AbstractBlockModel{T, S} <: AbstractNLPModel{T, S}
 A data type to store block subproblems of the form
 ```math
 \\begin{aligned}
@@ -62,7 +62,7 @@ mutable struct AbstractBlockModel{T, S} <: AbstractNLPModel{T, S}
     idx::Int
     var_idx::UnitRange{Int} # Indices of variables wrt the full space model
     con_idx::UnitRange{Int} # Indices of constraints wrt the full space model
-    linking_constraint_id::Vector{Int} # ID of linking constraints that connect this block with other blocks 
+    linking_constraint_id::Vector{Int} # ID of linking constraints that connect this block with other blocks
 end
 
 
@@ -96,7 +96,7 @@ where ``\\mathcal{B}`` is the set of variable blocks.
 
     BlockNLPModel()
 
-Initializes an empty `BlockNLPModel`. 
+Initializes an empty `BlockNLPModel`.
 """
 mutable struct BlockNLPModel <: AbstractBlockNLPModel
     problem_size::BlockNLPCounters
@@ -113,7 +113,7 @@ end
 
 """
     add_block(
-     block_nlp::AbstractBlockNLPModel, 
+     block_nlp::AbstractBlockNLPModel,
      nlp::AbstractNLPModel
     )
 
@@ -132,19 +132,19 @@ function add_block(block_nlp::AbstractBlockNLPModel, nlp::AbstractNLPModel)
     block_nlp.problem_size.var_counter += nlp.meta.nvar
     var_idx = temp_var_counter:block_nlp.problem_size.var_counter
 
-    temp_con_counter = block_nlp.problem_size.con_counter + 1 
+    temp_con_counter = block_nlp.problem_size.con_counter + 1
     block_nlp.problem_size.con_counter += nlp.meta.ncon
     con_idx = temp_con_counter:block_nlp.problem_size.con_counter
 
-    push!(block_nlp.blocks, AbstractBlockModel(nlp.meta, Counters(), 
+    push!(block_nlp.blocks, AbstractBlockModel(nlp.meta, Counters(),
     nlp, block_nlp.problem_size.block_counter, var_idx, con_idx, Vector{Int}()))
 end
 
 """
     add_links(
-      block_nlp::AbstractBlockNLPModel, 
-      n_constraints::Int,   
-      links::Union{Dict{Int, Array{Float64, 2}}, Dict{Int, Vector{Float64}}}, 
+      block_nlp::AbstractBlockNLPModel,
+      n_constraints::Int,
+      links::Union{Dict{Int, Array{Float64, 2}}, Dict{Int, Vector{Float64}}},
       constants::Union{AbstractVector, Float64}
     )
 
@@ -153,26 +153,26 @@ This function must be called after subproblems have already been added.
 
 # Arguments
 
-- `block_nlp::AbstractBlockNLPModel`: The BlockNLPModel to which the constraint(s) is to be added.  
-- `n_constraints::Int`: Number of link constraints. 
+- `block_nlp::AbstractBlockNLPModel`: The BlockNLPModel to which the constraint(s) is to be added.
+- `n_constraints::Int`: Number of link constraints.
 - `links::Union{Dict{Int, Array{Float64, 2}}, Dict{Int, Vector{Float64}}}`: coefficients of the block matrices that link different blocks,
 - `constants::Union{AbstractVector, Float64}`: RHS vector
 """
-function add_links(block_nlp::AbstractBlockNLPModel, n_constraints::Int, 
-    links::Union{Dict{Int, Array{Float64, 2}}, Dict{Int, Vector{Float64}}}, 
+function add_links(block_nlp::AbstractBlockNLPModel, n_constraints::Int,
+    links::Union{Dict{Int, Array{Float64, 2}}, Dict{Int, Vector{Float64}}},
     constants::Union{AbstractVector, Float64})
-  
+
     # Initialize linking_blocks with empty matrices
-    linking_blocks = [spzeros(n_constraints, block_nlp.blocks[i].meta.nvar) 
+    linking_blocks = [spzeros(n_constraints, block_nlp.blocks[i].meta.nvar)
     for i in 1:block_nlp.problem_size.block_counter]
-  
+
     # check if everything is of appropriate size and add to linking_blocks
     @assert length(constants) == n_constraints
     if n_constraints == 1
       rhs_vector = [constants]
       for block_idx in keys(links)
         @assert length(links[block_idx]) == block_nlp.blocks[block_idx].meta.nvar
-        linking_blocks[block_idx][1, :] = sparse(links[block_idx])  
+        linking_blocks[block_idx][1, :] = sparse(links[block_idx])
       end
     else
       rhs_vector = constants
@@ -182,7 +182,7 @@ function add_links(block_nlp::AbstractBlockNLPModel, n_constraints::Int,
         linking_blocks[block_idx] = sparse(links[block_idx])
       end
     end
-  
+
     # Prepare other information
     link_map = Dict{Int, Vector{Int}}()
     link_con_idx = Vector{Int}()
