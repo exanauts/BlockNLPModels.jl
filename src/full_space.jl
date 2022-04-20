@@ -177,13 +177,15 @@ cols::AbstractVector{T}) where {T}
     idx = 0
     for i in 1:nb
         block = nlp.blocknlp.blocks[i]
-        temp_idx = idx+1
-        idx += block.meta.nnzj
-        v1 = @view rows[temp_idx:idx]
-        v2 = @view cols[temp_idx:idx]
-        jac_structure!(block.problem_block, v1, v2)
-        v1 .+= (block.con_idx[1] - 1)
-        v2 .+= (block.var_idx[1] - 1)
+        if block.meta.ncon > 0
+            temp_idx = idx+1
+            idx += block.meta.nnzj
+            v1 = @view rows[temp_idx:idx]
+            v2 = @view cols[temp_idx:idx]
+            jac_structure!(block.problem_block, v1, v2)
+            v1 .+= (block.con_idx[1] - 1)
+            v2 .+= (block.var_idx[1] - 1)
+        end
     end
     r, c, v = findnz(get_linking_matrix(nlp.blocknlp))
     rows[idx+1:end] .= r .+ nlp.blocknlp.problem_size.con_counter
@@ -199,10 +201,12 @@ function NLPModels.jac_coord!(nlp::FullSpaceModel, x::AbstractVector, vals::Abst
     idx = 0
     for i in 1:nb
         block = nlp.blocknlp.blocks[i]
-        temp_idx = idx+1
-        idx += block.meta.nnzj
-        v1 = @view vals[temp_idx:idx]
-        jac_coord!(block.problem_block, x[block.var_idx], v1)
+        if block.meta.ncon > 0
+            temp_idx = idx+1
+            idx += block.meta.nnzj
+            v1 = @view vals[temp_idx:idx]
+            jac_coord!(block.problem_block, x[block.var_idx], v1)
+        end
     end
     r, c, v = findnz(get_linking_matrix(nlp.blocknlp))
     vals[idx+1:end] .= v
