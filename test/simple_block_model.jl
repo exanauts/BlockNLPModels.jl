@@ -67,10 +67,9 @@ end
     @test grad(fm, x) ≈ ∇f(x)
     @test cons(fm, x) ≈ g(x)
     @test jac(fm, x) ≈ J(x)
-    @test hess(fm, x, y) ≈ H(x, y)
-
-    # stats = ipopt(fm, print_level = 0) # throws an error
-    # @test isapprox(stats.solution, solution) 
+    @test hess(fm, x, y) ≈ tril(H(x, y))
+    stats = ipopt(fm, print_level = 0)
+    @test stats.solution ≈ [0.41, 1, 1]
 
     # Solve the full-space problem with MadNLP
     # To Do: Why MadNLP throws an error?
@@ -117,7 +116,10 @@ end
         @test augmented_block.meta.ncon ≈ 1
         @test obj(augmented_block, x) ≈ f(current_sol, i)
         @test grad(augmented_block, x) ≈ ∇f(current_sol, i)
-        @test hess(augmented_block, x, [1.0]) ≈ H(x, i) 
+        @test hess(augmented_block, x, [1.0]) ≈ H(x, i)
+        # Solve the block using MadNLP
+        result = madnlp(augmented_block;print_level=MadNLP.ERROR)
+        @test result.solution[1] ≈ 1.0
     end
 end
 
