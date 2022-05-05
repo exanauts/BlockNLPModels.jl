@@ -123,13 +123,13 @@ end
 
 """
     update_primal_sol!(
-      nlp::AbstractNLPModel, 
+      nlp::AugmentedNLPBlockModel, 
       sol::AbstractVector
     )
 Updates the primal solution for the augmented nlp block `nlp`.
 
 # Arguments
-- `nlp::AbstractNLPModel`: the subproblem 
+- `nlp::AugmentedNLPBlockModel`: the subproblem 
 - `sol::AbstractVector`: vector of primal variables
 """
 function update_primal_sol!(nlp::AugmentedNLPBlockModel, sol::AbstractVector)
@@ -138,13 +138,13 @@ end
 
 """
     update_dual_sol!(
-      nlp::AbstractNLPModel, 
+      nlp::AugmentedNLPBlockModel, 
       λ::AbstractVector, 
     )
 Updates the dual solution in-place for the augmented nlp block `nlp`.
 
 # Arguments
-- `nlp::AbstractNLPModel`: the subproblem 
+- `nlp::AugmentedNLPBlockModel`: the subproblem 
 - `λ::AbstractVector`: vector of dual variables
 """
 function update_dual_sol!(nlp::AugmentedNLPBlockModel, λ::AbstractVector)

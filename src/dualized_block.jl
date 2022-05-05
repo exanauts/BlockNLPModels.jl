@@ -30,6 +30,21 @@ function DualizedNLPBlockModel(nlp::AbstractNLPModel, λ::AbstractVector, A::Abs
     return DualizedNLPBlockModel(meta, Counters(), nlp, λ, A)
 end
 
+"""
+    update_dual_sol!(
+      nlp::DualizedNLPBlockModel, 
+      λ::AbstractVector, 
+    )
+Updates the dual solution in-place for the dualized nlp block `nlp`.
+
+# Arguments
+- `nlp::DualizedNLPBlockModel`: the subproblem 
+- `λ::AbstractVector`: vector of dual variables
+"""
+function update_dual_sol!(nlp::DualizedNLPBlockModel, λ::AbstractVector)
+    nlp.λ .= λ
+end
+
 function NLPModels.obj(nlp::DualizedNLPBlockModel, x::AbstractVector)
     n = nlp.problem_block.meta.nvar
     return obj(nlp.problem_block, x) + dot(nlp.λ, nlp.A, x)
