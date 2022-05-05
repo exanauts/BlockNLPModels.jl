@@ -196,7 +196,7 @@ end
 
 function NLPModels.jac_coord!(nlp::FullSpaceModel, x::AbstractVector, vals::AbstractVector)
     @lencheck nlp.meta.nvar x
-    @lencheck nlp.meta.nnzj vals
+    # @lencheck nlp.meta.nnzj vals
     increment!(nlp, :neval_jac)
     nb = nlp.blocknlp.problem_size.block_counter
     idx = 0
@@ -210,7 +210,8 @@ function NLPModels.jac_coord!(nlp::FullSpaceModel, x::AbstractVector, vals::Abst
         end
     end
     r, c, v = findnz(get_linking_matrix(nlp.blocknlp))
-    vals[idx+1:end] .= v
+    # vals[idx+1:end] .= v
+    vals[idx+1:nlp.meta.nnzj] .= v # for madnlpß
     return vals
 end
 
