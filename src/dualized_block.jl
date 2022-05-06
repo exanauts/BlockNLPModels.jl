@@ -31,7 +31,7 @@ function DualizedNLPBlockModel(nlp::AbstractNLPModel, λ::AbstractVector, A::Abs
 end
 
 """
-    update_dual_sol!(
+    update_dual!(
       nlp::DualizedNLPBlockModel, 
       λ::AbstractVector, 
     )
@@ -41,7 +41,7 @@ Updates the dual solution in-place for the dualized nlp block `nlp`.
 - `nlp::DualizedNLPBlockModel`: the subproblem 
 - `λ::AbstractVector`: vector of dual variables
 """
-function update_dual_sol!(nlp::DualizedNLPBlockModel, λ::AbstractVector)
+function update_dual!(nlp::DualizedNLPBlockModel, λ::AbstractVector)
     nlp.λ .= λ
 end
 
