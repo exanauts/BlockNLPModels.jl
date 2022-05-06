@@ -122,32 +122,32 @@ function get_hessian(m::AugmentedNLPBlockModel;
 end
 
 """
-    update_primal_sol!(
+    update_primal!(
       nlp::AugmentedNLPBlockModel, 
       sol::AbstractVector
     )
-Updates the primal solution for the augmented nlp block `nlp`.
+Updates the primal solution estimate for the augmented nlp block `nlp`.
 
 # Arguments
 - `nlp::AugmentedNLPBlockModel`: the subproblem 
 - `sol::AbstractVector`: vector of primal variables
 """
-function update_primal_sol!(nlp::AugmentedNLPBlockModel, sol::AbstractVector)
+function update_primal!(nlp::AugmentedNLPBlockModel, sol::AbstractVector)
     nlp.sol .= sol
 end
 
 """
-    update_dual_sol!(
+    update_dual!(
       nlp::AugmentedNLPBlockModel, 
       λ::AbstractVector, 
     )
-Updates the dual solution in-place for the augmented nlp block `nlp`.
+Updates the dual solution estimate in-place for the augmented nlp block `nlp`.
 
 # Arguments
 - `nlp::AugmentedNLPBlockModel`: the subproblem 
 - `λ::AbstractVector`: vector of dual variables
 """
-function update_dual_sol!(nlp::AugmentedNLPBlockModel, λ::AbstractVector)
+function update_dual!(nlp::AugmentedNLPBlockModel, λ::AbstractVector)
     nlp.λ .= λ
 end
 
