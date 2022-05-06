@@ -68,12 +68,14 @@ end
     @test cons(fm, x) ≈ g(x)
     @test jac(fm, x) ≈ J(x)
     @test hess(fm, x, y) ≈ tril(H(x, y))
+
+    # Solve the full-space problem with MadNLP
     stats = ipopt(fm, print_level = 0)
     @test stats.solution ≈ [0.41, 1, 1]
 
     # Solve the full-space problem with MadNLP
-    # To Do: Why MadNLP throws an error?
-    # madnlp(fm)
+    stats = madnlp(fm, print_level = MadNLP.WARN)
+    @test stats.solution ≈ [0.4099999816058684, 1.000000008750505, 1.000000009643627]
 end
 
 @testset "Testing dualized_block.jl" begin
