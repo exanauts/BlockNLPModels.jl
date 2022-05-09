@@ -11,7 +11,9 @@ end
 
 """
     FullSpaceModel(
-        ::Type{T}, m::AbstractBlockNLPModel
+        m::AbstractBlockNLPModel
+        x0::Union{Vector{Float64}, Nothing} = nothing, 
+        y0::Union{Vector{Float64}, Nothing} = nothing 
     ) where {T}
 
 Converts a `BlockNLPModel` to a `AbstractNLPModel` that can be solved with any standard NLP solver.
@@ -19,8 +21,14 @@ Converts a `BlockNLPModel` to a `AbstractNLPModel` that can be solved with any s
 # Arguments
 
 - `m::AbstractBlockNLPModel`: name of the BlockNLPModel
+- `x0::Union{Vector{Float64}, Nothing}`: warm start primal solution
+- `y0::Union{Vector{Float64}, Nothing}`: warm start dual solution
 """
-function FullSpaceModel(m::AbstractBlockNLPModel)
+function FullSpaceModel(
+    m::AbstractBlockNLPModel; 
+    x0::Union{Vector{Float64}, Nothing} = nothing, 
+    y0::Union{Vector{Float64}, Nothing} = nothing
+)
     nb = m.problem_size.block_counter
     n_var = sum(m.blocks[i].meta.nvar for i in 1:nb)
 
@@ -41,13 +49,16 @@ function FullSpaceModel(m::AbstractBlockNLPModel)
         l_var = vcat(l_var, m.blocks[i].meta.lvar)
         u_var = vcat(u_var, m.blocks[i].meta.uvar)
     end
+    isnothing(x0) && (x0 = zeros(Float64, n_var))
+    isnothing(y0) && (y0 = zeros(Float64, n_constraints(m)))
     meta = NLPModelMeta(
                         n_var,
                         ncon = n_constraints(m),
                         nnzh = sum(m.blocks[i].meta.nnzh for i in 1:nb),
                         nnzj = sum(m.blocks[i].meta.nnzj for i in 1:nb) +
                         nnz(get_linking_matrix(m)),
-                        x0 = zeros(Float64, n_var),
+                        x0 = x0,
+                        y0 = y0,
                         lvar = l_var,
                         uvar = u_var,
                         lcon = l_con,
