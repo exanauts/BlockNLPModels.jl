@@ -210,5 +210,5 @@ end
 include("full_space.jl")
 include("dualized_block.jl")
 include("augmented_block.jl")
-
+include("prox_augmented_block.jl")
 end # module
