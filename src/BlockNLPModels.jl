@@ -9,6 +9,7 @@ export BlockNLPModel
 export DualizedNLPBlockModel
 export AugmentedNLPBlockModel
 export FullSpaceModel
+export ProxAugmentedNLPBlockModel
 export add_block, add_links, n_constraints,
        get_linking_matrix, get_linking_matrix_blocks, 
        get_rhs_vector, update_dual!, update_primal!
