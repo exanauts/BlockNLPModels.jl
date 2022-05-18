@@ -49,8 +49,13 @@ function FullSpaceModel(
         l_var = vcat(l_var, m.blocks[i].meta.lvar)
         u_var = vcat(u_var, m.blocks[i].meta.uvar)
     end
-    isnothing(x0) && (x0 = zeros(Float64, n_var))
-    isnothing(y0) && (y0 = zeros(Float64, n_constraints(m)))
+
+    isnothing(x0) && (x0 = [m.blocks[i].meta.x0 for i in 1:nb])
+    x0 = reduce(vcat, x0)
+
+    isnothing(y0) && (y0 = [m.blocks[i].meta.y0 for i in 1:nb])
+    y0 = reduce(vcat, push!(y0, zeros(Float64, m.problem_size.link_counter)))
+
     meta = NLPModelMeta(
                         n_var,
                         ncon = n_constraints(m),

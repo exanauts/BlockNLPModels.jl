@@ -6,7 +6,7 @@ block_model = BlockNLPModel()
 T = rand(rng, 1:5, B)
 for i in 1:B
     model = Model()
-    @variable(model, x >= 0)
+    @variable(model, x >= 0, start = rand(rng))
     @objective(model, Min, (x - T[i])^2)
     @constraint(model, x <= 1)
     nlp = MathOptNLPModel(model)
@@ -93,7 +93,7 @@ end
         @test grad(dualized_block, x) ≈ ∇f(x, i)
 
         # Solve the block using MadNLP
-        result = madnlp(dualized_block;print_level=MadNLP.ERROR)
+        result = ipopt(dualized_block;print_level=0)
         @test result.solution[1] ≈ 1.0
     end
 end
@@ -120,7 +120,7 @@ end
         @test grad(augmented_block, x) ≈ ∇f(current_sol, i)
         @test hess(augmented_block, x, [1.0]) ≈ H(x, i)
         # Solve the block using MadNLP
-        result = madnlp(augmented_block;print_level=MadNLP.ERROR)
+        result = ipopt(augmented_block;print_level=0)
         @test result.solution[1] ≈ 1.0
     end
 end
