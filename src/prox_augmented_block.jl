@@ -1,9 +1,8 @@
 """
-    AugmentedNLPBlockModel{T, S} <: AbstractNLPModel{T, S}
-
+    ProxAugmentedNLPBlockModel{T, S} <: AbstractNLPModel{T, S}
 A data type to store augmented subproblems.
 """
-mutable struct AugmentedNLPBlockModel{T,S} <: AbstractNLPModel{T,S}
+mutable struct ProxAugmentedNLPBlockModel{T,S} <: AbstractNLPModel{T,S}
     meta::NLPModelMeta{T,S}
     counters::Counters
     subproblem::AbstractNLPModel
@@ -13,19 +12,20 @@ mutable struct AugmentedNLPBlockModel{T,S} <: AbstractNLPModel{T,S}
     b::AbstractVector
     sol::AbstractVector # current primal solution
     hess_info::AugmentedHessianInfo # precompute to save computation effort
+    P::AbstractMatrix # proximal term's penalty parameters
 end
 
 """
-    AugmentedNLPBlockModel(
+    ProxAugmentedNLPBlockModel(
         nlp::AbstractNLPModel,
         λ::AbstractVector,
         ρ::Number,
         A::AbstractMatrix,
         b::AbstractVector,
-        sol::AbstractVector
+        sol::AbstractVector,
+        P::AbstractMatrix
     )
 Modifies a subproblem by penalizing and dualizing the linking constraints.
-
 # Arguments
 - `nlp::AbstractNLPModel`: the subproblem
 - `λ::AbstractVector`: vector of dual variables
@@ -33,31 +33,44 @@ Modifies a subproblem by penalizing and dualizing the linking constraints.
 - `A::AbstractMatrix`: full linking matrix
 - `b::AbstractVector`: RHS vector for linking constraints
 - `sol::AbstractVector`: vector of primal variables
+- `P::AbstractMatrix`: matrix of proximal term's penalty parameters
 """
-function AugmentedNLPBlockModel(
+function ProxAugmentedNLPBlockModel(
     nlp::AbstractNLPModel,
     λ::AbstractVector,
     ρ::Number,
     A::AbstractMatrix,
     b::AbstractVector,
     sol::AbstractVector,
+    P::AbstractMatrix,
 )
-
     ATA = findnz(ρ .* A[:, nlp.var_idx]' * A[:, nlp.var_idx])
-
     block_hess_struct = hess_structure(nlp.problem_block)
-    I = vcat(block_hess_struct[1], ATA[1])
-    J = vcat(block_hess_struct[2], ATA[2])
-    V = vcat(ones(nlp.meta.nnzh), ρ .* abs.(ATA[3]))
-    aug_hess_struct = findnz(sparse(I, J, V, nlp.meta.nvar, nlp.meta.nvar))
-    meta = update_nnzh(nlp.meta, length(aug_hess_struct[1]))
+    P_triplets = findnz(P)
+
+    I = vcat(block_hess_struct[1], ATA[1], P_triplets[1])
+    J = vcat(block_hess_struct[2], ATA[2], P_triplets[2])
+    V = vcat(ones(nlp.meta.nnzh), ρ .* abs.(ATA[3]), abs.(P_triplets[3]))
+    prox_aug_hess_struct = findnz(sparse(I, J, V, nlp.meta.nvar, nlp.meta.nvar))
+    meta = update_nnzh(nlp.meta, length(prox_aug_hess_struct[1]))
 
     hess_struct = AugmentedHessianInfo(
-        (aug_hess_struct[1], aug_hess_struct[2]),
+        (prox_aug_hess_struct[1], prox_aug_hess_struct[2]),
         (block_hess_struct[1], block_hess_struct[2]),
         ATA,
     )
-    return AugmentedNLPBlockModel(meta, Counters(), nlp, λ, ρ, A, b, sol, hess_struct)
+    return ProxAugmentedNLPBlockModel(
+        meta,
+        Counters(),
+        nlp,
+        λ,
+        ρ,
+        A,
+        b,
+        sol,
+        hess_struct,
+        P,
+    )
 end
 
 """
@@ -66,12 +79,11 @@ end
       sol::AbstractVector
     )
 Updates the primal solution estimate for the augmented nlp block `nlp`.
-
 # Arguments
 - `nlp::AugmentedNLPBlockModel`: the subproblem 
 - `sol::AbstractVector`: vector of primal variables
 """
-function update_primal!(nlp::AugmentedNLPBlockModel, sol::AbstractVector)
+function update_primal!(nlp::ProxAugmentedNLPBlockModel, sol::AbstractVector)
     nlp.sol .= sol
 end
 
@@ -81,25 +93,33 @@ end
       λ::AbstractVector, 
     )
 Updates the dual solution estimate in-place for the augmented nlp block `nlp`.
-
 # Arguments
 - `nlp::AugmentedNLPBlockModel`: the subproblem 
 - `λ::AbstractVector`: vector of dual variables
 """
-function update_dual!(nlp::AugmentedNLPBlockModel, λ::AbstractVector)
+function update_dual!(nlp::ProxAugmentedNLPBlockModel, λ::AbstractVector)
     nlp.λ .= λ
 end
 
-function NLPModels.obj(nlp::AugmentedNLPBlockModel, x::AbstractVector)
+function NLPModels.obj(nlp::ProxAugmentedNLPBlockModel, x::AbstractVector)
     local_sol = deepcopy(nlp.sol)
     local_sol[nlp.subproblem.var_idx] = x
 
     return obj(nlp.subproblem.problem_block, x) +
            dot(nlp.λ, nlp.A[:, nlp.subproblem.var_idx], x) +
-           (nlp.ρ / 2) * norm(nlp.A * local_sol - nlp.b)^2
+           (nlp.ρ / 2) * norm(nlp.A * local_sol - nlp.b)^2 +
+           1 / 2 * dot(
+               (x - nlp.sol[nlp.subproblem.var_idx]),
+               nlp.P,
+               (x - nlp.sol[nlp.subproblem.var_idx]),
+           )
 end
 
-function NLPModels.grad!(nlp::AugmentedNLPBlockModel, x::AbstractVector, g::AbstractVector)
+function NLPModels.grad!(
+    nlp::ProxAugmentedNLPBlockModel,
+    x::AbstractVector,
+    g::AbstractVector,
+)
     local_sol = deepcopy(nlp.sol)
     local_sol[nlp.subproblem.var_idx] = x
 
@@ -107,15 +127,16 @@ function NLPModels.grad!(nlp::AugmentedNLPBlockModel, x::AbstractVector, g::Abst
     mul!(
         g,
         nlp.A[:, nlp.subproblem.var_idx]',
-        nlp.λ + nlp.ρ .* (nlp.A * local_sol - nlp.b),
+        (nlp.λ + nlp.ρ .* (nlp.A * local_sol - nlp.b)),
         1,
         1,
     )
+    mul!(g, nlp.P, (x - nlp.sol[nlp.subproblem.var_idx]), 1, 1)
     return g
 end
 
 function NLPModels.hess_structure!(
-    nlp::AugmentedNLPBlockModel,
+    nlp::ProxAugmentedNLPBlockModel,
     rows::AbstractVector{T},
     cols::AbstractVector{T},
 ) where {T}
@@ -125,32 +146,63 @@ function NLPModels.hess_structure!(
 end
 
 function NLPModels.hess_coord!(
-    nlp::AugmentedNLPBlockModel,
+    nlp::ProxAugmentedNLPBlockModel,
     x::AbstractVector{T},
     vals::AbstractVector{T};
     obj_weight = one(T),
 ) where {T}
     get_augmented_hessian_coord!(nlp, x, vals, obj_weight)
+
+    aug_hess = nlp.hess_info.augmented_hessian_struct
+    P_triplets = findnz(nlp.P)
+    # add the proximal term weights
+    main_idx = 1
+    sub_idx = 1
+    for (i, j) in zip(aug_hess[1], aug_hess[2])
+        if P_triplets[1][sub_idx] == i && P_triplets[2][sub_idx] == j
+            vals[main_idx] += P_triplets[3][sub_idx]
+            sub_idx += 1
+        end
+        main_idx += 1
+    end
     return vals
 end
 
 function NLPModels.hess_coord!(
-    nlp::AugmentedNLPBlockModel,
+    nlp::ProxAugmentedNLPBlockModel,
     x::AbstractVector{T},
     y::AbstractVector{T},
     vals::AbstractVector{T};
     obj_weight = one(T),
 ) where {T}
     get_augmented_hessian_coord!(nlp, x, vals, obj_weight, y = y)
+
+    aug_hess = nlp.hess_info.augmented_hessian_struct
+    P_triplets = findnz(nlp.P)
+    # add the proximal term weights
+    main_idx = 1
+    sub_idx = 1
+    for (i, j) in zip(aug_hess[1], aug_hess[2])
+        if P_triplets[1][sub_idx] == i && P_triplets[2][sub_idx] == j
+            vals[main_idx] += P_triplets[3][sub_idx]
+            sub_idx += 1
+        end
+        main_idx += 1
+    end
+    return vals
     return vals
 end
 
-function NLPModels.cons!(nlp::AugmentedNLPBlockModel, x::AbstractVector, cx::AbstractVector)
+function NLPModels.cons!(
+    nlp::ProxAugmentedNLPBlockModel,
+    x::AbstractVector,
+    cx::AbstractVector,
+)
     return cons!(nlp.subproblem.problem_block, x, cx)
 end
 
 function NLPModels.jac_structure!(
-    nlp::AugmentedNLPBlockModel,
+    nlp::ProxAugmentedNLPBlockModel,
     rows::AbstractVector{T},
     cols::AbstractVector{T},
 ) where {T}
@@ -158,7 +210,7 @@ function NLPModels.jac_structure!(
 end
 
 function NLPModels.jac_coord!(
-    nlp::AugmentedNLPBlockModel,
+    nlp::ProxAugmentedNLPBlockModel,
     x::AbstractVector,
     vals::AbstractVector,
 )

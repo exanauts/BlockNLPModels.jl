@@ -9,9 +9,15 @@ export BlockNLPModel
 export DualizedNLPBlockModel
 export AugmentedNLPBlockModel
 export FullSpaceModel
-export add_block, add_links, n_constraints,
-       get_linking_matrix, get_linking_matrix_blocks, 
-       get_rhs_vector, update_dual!, update_primal!
+export ProxAugmentedNLPBlockModel
+export add_block,
+    add_links,
+    n_constraints,
+    get_linking_matrix,
+    get_linking_matrix_blocks,
+    get_rhs_vector,
+    update_dual!,
+    update_primal!
 
 """
     AbstractBlockNLPModel
@@ -30,8 +36,6 @@ Abstract supertype for the definition of nonlinear linking constraints
 """
 abstract type AbstractNonLinearLinkConstraint end
 
-include("utils.jl")
-
 """
     BlockNLPCounters()
 Keeps a count of blocks, linking constraints, variables, and (block) constraints attached to the model.
@@ -42,7 +46,7 @@ mutable struct BlockNLPCounters
     var_counter::Int
     con_counter::Int
     function BlockNLPCounters()
-        return new(0,0,0,0)
+        return new(0, 0, 0, 0)
     end
 end
 
@@ -56,8 +60,8 @@ A data type to store block subproblems of the form
 \\end{aligned}
 where ``i`` is the index of the block.
 """
-mutable struct AbstractBlockModel{T, S} <: AbstractNLPModel{T, S}
-    meta::NLPModelMeta{T, S}
+mutable struct AbstractBlockModel{T,S} <: AbstractNLPModel{T,S}
+    meta::NLPModelMeta{T,S}
     counters::Counters
     problem_block::AbstractNLPModel
     idx::Int
@@ -78,7 +82,7 @@ A data type to store linear link constraints of the form
 mutable struct LinearLinkConstraint <: AbstractLinearLinkConstraint
     linking_blocks::Vector{SparseMatrixCSC{Float64,Int}}
     idx::UnitRange{Int}
-    link_map::Dict{Int, Vector{Int}} # constraint => blocks, i.e., which constraint connects which blocks
+    link_map::Dict{Int,Vector{Int}} # constraint => blocks, i.e., which constraint connects which blocks
     rhs_vector::Vector{Float64}
 end
 
@@ -102,13 +106,15 @@ Initializes an empty `BlockNLPModel`.
 mutable struct BlockNLPModel <: AbstractBlockNLPModel
     problem_size::BlockNLPCounters
     blocks::Vector{AbstractBlockModel}
-    linking_constraints::Vector{Union{AbstractLinearLinkConstraint, AbstractNonLinearLinkConstraint}}
+    linking_constraints::Vector{
+        Union{AbstractLinearLinkConstraint,AbstractNonLinearLinkConstraint},
+    }
     function BlockNLPModel()
         return new(
-                   BlockNLPCounters(),
-                   Vector{AbstractBlockModel}(),
-                   Vector{Union{AbstractLinearLinkConstraint, AbstractNonLinearLinkConstraint}}()
-                  )
+            BlockNLPCounters(),
+            Vector{AbstractBlockModel}(),
+            Vector{Union{AbstractLinearLinkConstraint,AbstractNonLinearLinkConstraint}}(),
+        )
     end
 end
 
@@ -137,8 +143,18 @@ function add_block(block_nlp::AbstractBlockNLPModel, nlp::AbstractNLPModel)
     block_nlp.problem_size.con_counter += nlp.meta.ncon
     con_idx = temp_con_counter:block_nlp.problem_size.con_counter
 
-    push!(block_nlp.blocks, AbstractBlockModel(nlp.meta, Counters(),
-                                               nlp, block_nlp.problem_size.block_counter, var_idx, con_idx, Vector{Int}()))
+    push!(
+        block_nlp.blocks,
+        AbstractBlockModel(
+            nlp.meta,
+            Counters(),
+            nlp,
+            block_nlp.problem_size.block_counter,
+            var_idx,
+            con_idx,
+            Vector{Int}(),
+        ),
+    )
 end
 
 """
@@ -159,14 +175,18 @@ This function must be called after subproblems have already been added.
 - `links::Union{Dict{Int, Array{Float64, 2}}, Dict{Int, Vector{Float64}}}`: coefficients of the block matrices that link different blocks,
 - `constants::Union{AbstractVector, Float64}`: RHS vector
 """
-function add_links(block_nlp::AbstractBlockNLPModel, n_constraints::Int,
-    links::Union{Dict{Int, Array{Float64, 2}}, Dict{Int, Vector{Float64}}},
-    constants::Union{AbstractVector, Float64},
+function add_links(
+    block_nlp::AbstractBlockNLPModel,
+    n_constraints::Int,
+    links::Union{Dict{Int,Array{Float64,2}},Dict{Int,Vector{Float64}}},
+    constants::Union{AbstractVector,Float64},
 )
 
     # Initialize linking_blocks with empty matrices
-    linking_blocks = [spzeros(n_constraints, block_nlp.blocks[i].meta.nvar)
-                      for i in 1:block_nlp.problem_size.block_counter]
+    linking_blocks = [
+        spzeros(n_constraints, block_nlp.blocks[i].meta.nvar) for
+        i = 1:block_nlp.problem_size.block_counter
+    ]
 
     # check if everything is of appropriate size and add to linking_blocks
     @assert length(constants) == n_constraints
@@ -186,17 +206,21 @@ function add_links(block_nlp::AbstractBlockNLPModel, n_constraints::Int,
     end
 
     # Prepare other information
-    link_map = Dict{Int, Vector{Int}}()
+    link_map = Dict{Int,Vector{Int}}()
     link_con_idx = Vector{Int}()
 
     # Parse the constraints one-by-one to collect this information
     temp_link_counter = block_nlp.problem_size.link_counter + 1
-    for con in 1:n_constraints
+    for con = 1:n_constraints
         block_nlp.problem_size.link_counter += 1
         link_map[block_nlp.problem_size.link_counter] = Vector{Int}()
         for block_idx in keys(links)
-            if linking_blocks[block_idx][con, :] != spzeros(block_nlp.blocks[block_idx].meta.nvar)
-                push!(block_nlp.blocks[block_idx].linking_constraint_id, block_nlp.problem_size.link_counter)
+            if linking_blocks[block_idx][con, :] !=
+               spzeros(block_nlp.blocks[block_idx].meta.nvar)
+                push!(
+                    block_nlp.blocks[block_idx].linking_constraint_id,
+                    block_nlp.problem_size.link_counter,
+                )
                 push!(link_map[block_nlp.problem_size.link_counter], block_idx)
             end
         end
@@ -206,8 +230,9 @@ function add_links(block_nlp::AbstractBlockNLPModel, n_constraints::Int,
     push!(block_nlp.linking_constraints, lin_link_con)
 end
 
+include("utils.jl")
 include("full_space.jl")
 include("dualized_block.jl")
 include("augmented_block.jl")
-
+include("prox_augmented_block.jl")
 end # module
