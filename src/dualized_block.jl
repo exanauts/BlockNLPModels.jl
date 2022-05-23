@@ -3,8 +3,8 @@
 
 A data type to store dualized subproblems.
 """
-mutable struct DualizedNLPBlockModel{T, S} <: AbstractNLPModel{T, S}
-    meta::NLPModelMeta{T, S}
+mutable struct DualizedNLPBlockModel{T,S} <: AbstractNLPModel{T,S}
+    meta::NLPModelMeta{T,S}
     counters::Counters
     problem_block::AbstractNLPModel
     λ::AbstractVector # dual variables
@@ -56,7 +56,11 @@ function NLPModels.grad!(nlp::DualizedNLPBlockModel, x::AbstractVector, g::Abstr
     return g
 end
 
-function NLPModels.hess_structure!(nlp::DualizedNLPBlockModel, rows::AbstractVector{T}, cols::AbstractVector{T}) where {T}
+function NLPModels.hess_structure!(
+    nlp::DualizedNLPBlockModel,
+    rows::AbstractVector{T},
+    cols::AbstractVector{T},
+) where {T}
     return hess_structure!(nlp.problem_block, rows, cols)
 end
 
@@ -70,12 +74,12 @@ function NLPModels.hess_coord!(
 end
 
 function NLPModels.hess_coord!(
-        nlp::DualizedNLPBlockModel,
-        x::AbstractVector{T},
-        y::AbstractVector{T},
-        vals::AbstractVector{T};
-        obj_weight = one(T),
-    ) where {T}
+    nlp::DualizedNLPBlockModel,
+    x::AbstractVector{T},
+    y::AbstractVector{T},
+    vals::AbstractVector{T};
+    obj_weight = one(T),
+) where {T}
     return hess_coord!(nlp.problem_block, x, y, vals, obj_weight = obj_weight)
 end
 
@@ -83,10 +87,18 @@ function NLPModels.cons!(nlp::DualizedNLPBlockModel, x::AbstractVector, cx::Abst
     return cons!(nlp.problem_block, x, cx)
 end
 
-function NLPModels.jac_structure!(nlp::DualizedNLPBlockModel, rows::AbstractVector{T}, cols::AbstractVector{T}) where {T}
+function NLPModels.jac_structure!(
+    nlp::DualizedNLPBlockModel,
+    rows::AbstractVector{T},
+    cols::AbstractVector{T},
+) where {T}
     return jac_structure!(nlp.problem_block, rows, cols)
 end
 
-function NLPModels.jac_coord!(nlp::DualizedNLPBlockModel, x::AbstractVector, vals::AbstractVector)
+function NLPModels.jac_coord!(
+    nlp::DualizedNLPBlockModel,
+    x::AbstractVector,
+    vals::AbstractVector,
+)
     return jac_coord!(nlp.problem_block, x, vals)
 end

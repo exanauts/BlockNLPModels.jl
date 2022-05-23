@@ -17,12 +17,12 @@ function dual_decomposition(m::AbstractBlockNLPModel)
 
     while iter_count <= max_iter
         iter_count += 1
-        for i in 1:N
+        for i = 1:N
             dualized_block = DualizedNLPblockModel(m.blocks[i], [y], [m.linkconstraints[i]])
             x[i] = ipopt(dualized_block, print_level = 0).solution[1]
         end
-        y += t*(sum(m.linkconstraints[j]*x[j] for j = 1:B) - m.linkconstraints[B+1])
+        y += t * (sum(m.linkconstraints[j] * x[j] for j = 1:B) - m.linkconstraints[B+1])
     end
     # TODO: Introduce verbosity parameter and make available more output options
     return x
-end  
+end
