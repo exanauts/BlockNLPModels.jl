@@ -11,6 +11,7 @@ mutable struct ProxAugmentedNLPBlockModel{T,S} <: AbstractNLPModel{T,S}
     A::AbstractMatrix # linking matrix
     b::AbstractVector
     sol::AbstractVector # current primal solution
+    local_sol::AbstractVector # pre-allocated vector for grad! and obj!
     hess_info::AugmentedHessianInfo # precompute to save computation effort
     P::AbstractMatrix # proximal term's penalty parameters
 end
@@ -68,6 +69,7 @@ function ProxAugmentedNLPBlockModel(
         A,
         b,
         sol,
+        sol,
         hess_struct,
         P,
     )
@@ -85,6 +87,7 @@ Updates the primal solution estimate for the augmented nlp block `nlp`.
 """
 function update_primal!(nlp::ProxAugmentedNLPBlockModel, sol::AbstractVector)
     nlp.sol .= sol
+    nlp.local .= sol
 end
 
 """
@@ -102,12 +105,11 @@ function update_dual!(nlp::ProxAugmentedNLPBlockModel, λ::AbstractVector)
 end
 
 function NLPModels.obj(nlp::ProxAugmentedNLPBlockModel, x::AbstractVector)
-    local_sol = deepcopy(nlp.sol)
-    local_sol[nlp.subproblem.var_idx] = x
+    nlp.local_sol[nlp.subproblem.var_idx] = x
 
     return obj(nlp.subproblem.problem_block, x) +
            dot(nlp.λ, nlp.A[:, nlp.subproblem.var_idx], x) +
-           (nlp.ρ / 2) * norm(nlp.A * local_sol - nlp.b)^2 +
+           (nlp.ρ / 2) * norm(nlp.A * nlp.local_sol - nlp.b)^2 +
            1 / 2 * dot(
                (x - nlp.sol[nlp.subproblem.var_idx]),
                nlp.P,
@@ -120,14 +122,13 @@ function NLPModels.grad!(
     x::AbstractVector,
     g::AbstractVector,
 )
-    local_sol = deepcopy(nlp.sol)
-    local_sol[nlp.subproblem.var_idx] = x
+    nlp.local_sol[nlp.subproblem.var_idx] = x
 
     grad!(nlp.subproblem.problem_block, x, g)
     mul!(
         g,
         nlp.A[:, nlp.subproblem.var_idx]',
-        (nlp.λ + nlp.ρ .* (nlp.A * local_sol - nlp.b)),
+        (nlp.λ + nlp.ρ .* (nlp.A * nlp.local_sol - nlp.b)),
         1,
         1,
     )

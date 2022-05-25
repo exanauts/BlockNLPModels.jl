@@ -12,6 +12,7 @@ mutable struct AugmentedNLPBlockModel{T,S} <: AbstractNLPModel{T,S}
     A::AbstractMatrix # linking matrix
     b::AbstractVector
     sol::AbstractVector # current primal solution
+    local_sol::AbstractVector # pre-allocated vector for grad! and obj!
     hess_info::AugmentedHessianInfo # precompute to save computation effort
 end
 
@@ -57,7 +58,7 @@ function AugmentedNLPBlockModel(
         (block_hess_struct[1], block_hess_struct[2]),
         ATA,
     )
-    return AugmentedNLPBlockModel(meta, Counters(), nlp, λ, ρ, A, b, sol, hess_struct)
+    return AugmentedNLPBlockModel(meta, Counters(), nlp, λ, ρ, A, b, sol, sol, hess_struct)
 end
 
 """
@@ -73,6 +74,7 @@ Updates the primal solution estimate for the augmented nlp block `nlp`.
 """
 function update_primal!(nlp::AugmentedNLPBlockModel, sol::AbstractVector)
     nlp.sol .= sol
+    nlp.local_sol .= sol
 end
 
 """
@@ -91,23 +93,21 @@ function update_dual!(nlp::AugmentedNLPBlockModel, λ::AbstractVector)
 end
 
 function NLPModels.obj(nlp::AugmentedNLPBlockModel, x::AbstractVector)
-    local_sol = deepcopy(nlp.sol)
-    local_sol[nlp.subproblem.var_idx] = x
+    nlp.local_sol[nlp.subproblem.var_idx] = x
 
     return obj(nlp.subproblem.problem_block, x) +
            dot(nlp.λ, nlp.A[:, nlp.subproblem.var_idx], x) +
-           (nlp.ρ / 2) * norm(nlp.A * local_sol - nlp.b)^2
+           (nlp.ρ / 2) * norm(nlp.A * nlp.local_sol - nlp.b)^2
 end
 
 function NLPModels.grad!(nlp::AugmentedNLPBlockModel, x::AbstractVector, g::AbstractVector)
-    local_sol = deepcopy(nlp.sol)
-    local_sol[nlp.subproblem.var_idx] = x
+    nlp.local_sol[nlp.subproblem.var_idx] = x
 
     grad!(nlp.subproblem.problem_block, x, g)
     mul!(
         g,
         nlp.A[:, nlp.subproblem.var_idx]',
-        nlp.λ + nlp.ρ .* (nlp.A * local_sol - nlp.b),
+        nlp.λ + nlp.ρ .* (nlp.A * nlp.local_sol - nlp.b),
         1,
         1,
     )
