@@ -57,7 +57,7 @@ function AugmentedNLPBlockModel(
         (block_hess_struct[1], block_hess_struct[2]),
         ATA,
     )
-    return AugmentedNLPBlockModel(meta, Counters(), nlp, λ, ρ, A, b, sol, hess_struct)
+    return AugmentedNLPBlockModel(meta, Counters(), nlp, λ, ρ, A, b, deepcopy(sol), hess_struct)
 end
 
 """
@@ -91,23 +91,21 @@ function update_dual!(nlp::AugmentedNLPBlockModel, λ::AbstractVector)
 end
 
 function NLPModels.obj(nlp::AugmentedNLPBlockModel, x::AbstractVector)
-    local_sol = deepcopy(nlp.sol)
-    local_sol[nlp.subproblem.var_idx] = x
+    nlp.sol[nlp.subproblem.var_idx] = x
 
     return obj(nlp.subproblem.problem_block, x) +
            dot(nlp.λ, nlp.A[:, nlp.subproblem.var_idx], x) +
-           (nlp.ρ / 2) * norm(nlp.A * local_sol - nlp.b)^2
+           (nlp.ρ / 2) * norm(nlp.A * nlp.sol - nlp.b)^2
 end
 
 function NLPModels.grad!(nlp::AugmentedNLPBlockModel, x::AbstractVector, g::AbstractVector)
-    local_sol = deepcopy(nlp.sol)
-    local_sol[nlp.subproblem.var_idx] = x
+    nlp.sol[nlp.subproblem.var_idx] = x
 
     grad!(nlp.subproblem.problem_block, x, g)
     mul!(
         g,
         nlp.A[:, nlp.subproblem.var_idx]',
-        nlp.λ + nlp.ρ .* (nlp.A * local_sol - nlp.b),
+        nlp.λ + nlp.ρ .* (nlp.A * nlp.sol - nlp.b),
         1,
         1,
     )

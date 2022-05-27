@@ -11,6 +11,7 @@ mutable struct ProxAugmentedNLPBlockModel{T,S} <: AbstractNLPModel{T,S}
     A::AbstractMatrix # linking matrix
     b::AbstractVector
     sol::AbstractVector # current primal solution
+    block_sol::AbstractVector # current block primal solution for the proximal term
     hess_info::AugmentedHessianInfo # precompute to save computation effort
     P::AbstractMatrix # proximal term's penalty parameters
 end
@@ -67,7 +68,8 @@ function ProxAugmentedNLPBlockModel(
         ρ,
         A,
         b,
-        sol,
+        deepcopy(sol),
+        sol[nlp.var_idx], # for the proximal term
         hess_struct,
         P,
     )
@@ -85,6 +87,7 @@ Updates the primal solution estimate for the augmented nlp block `nlp`.
 """
 function update_primal!(nlp::ProxAugmentedNLPBlockModel, sol::AbstractVector)
     nlp.sol .= sol
+    nlp.block_sol .= sol[nlp.subproblem.var_idx]
 end
 
 """
@@ -102,16 +105,14 @@ function update_dual!(nlp::ProxAugmentedNLPBlockModel, λ::AbstractVector)
 end
 
 function NLPModels.obj(nlp::ProxAugmentedNLPBlockModel, x::AbstractVector)
-    local_sol = deepcopy(nlp.sol)
-    local_sol[nlp.subproblem.var_idx] = x
-
+    nlp.sol[nlp.subproblem.var_idx] = x
     return obj(nlp.subproblem.problem_block, x) +
            dot(nlp.λ, nlp.A[:, nlp.subproblem.var_idx], x) +
-           (nlp.ρ / 2) * norm(nlp.A * local_sol - nlp.b)^2 +
+           (nlp.ρ / 2) * norm(nlp.A * nlp.sol - nlp.b)^2 +
            1 / 2 * dot(
-               (x - nlp.sol[nlp.subproblem.var_idx]),
+               (x - nlp.block_sol),
                nlp.P,
-               (x - nlp.sol[nlp.subproblem.var_idx]),
+               (x - nlp.block_sol),
            )
 end
 
@@ -120,18 +121,17 @@ function NLPModels.grad!(
     x::AbstractVector,
     g::AbstractVector,
 )
-    local_sol = deepcopy(nlp.sol)
-    local_sol[nlp.subproblem.var_idx] = x
+    nlp.sol[nlp.subproblem.var_idx] = x
 
     grad!(nlp.subproblem.problem_block, x, g)
     mul!(
         g,
         nlp.A[:, nlp.subproblem.var_idx]',
-        (nlp.λ + nlp.ρ .* (nlp.A * local_sol - nlp.b)),
+        (nlp.λ + nlp.ρ .* (nlp.A * nlp.sol - nlp.b)),
         1,
         1,
     )
-    mul!(g, nlp.P, (x - nlp.sol[nlp.subproblem.var_idx]), 1, 1)
+    mul!(g, nlp.P, (x - nlp.block_sol), 1, 1)
     return g
 end
 
