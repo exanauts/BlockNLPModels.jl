@@ -91,16 +91,16 @@ function update_dual!(nlp::AugmentedNLPBlockModel, λ::AbstractVector)
 end
 
 """
-    update_ρ!(
+    update_rho!(
       nlp::AugmentedNLPBlockModel, 
       ρ::Number, 
     )
-Updates the dual solution estimate in-place for the augmented nlp block `nlp`.
+Updates the penalty parameter in-place for the augmented nlp block `nlp`.
 # Arguments
 - `nlp::AugmentedNLPBlockModel`: the subproblem 
 - `ρ::Number`: vector of dual variables
 """
-function update_ρ!(nlp::AugmentedNLPBlockModel, ρ::Number)
+function update_rho!(nlp::AugmentedNLPBlockModel, ρ::Number)
     nlp.ρ = ρ
 end
 

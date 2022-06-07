@@ -18,7 +18,7 @@ export add_block,
     get_rhs_vector,
     update_dual!,
     update_primal!,
-    update_ρ!
+    update_rho!
 
 """
     AbstractBlockNLPModel

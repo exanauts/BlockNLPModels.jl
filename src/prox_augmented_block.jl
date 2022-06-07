@@ -105,16 +105,16 @@ function update_dual!(nlp::ProxAugmentedNLPBlockModel, λ::AbstractVector)
 end
 
 """
-    update_ρ!(
+    update_rho!(
       nlp::ProxAugmentedNLPBlockModel, 
       ρ::Number, 
     )
-Updates the dual solution estimate in-place for the augmented nlp block `nlp`.
+Updates the penalty parameter in-place for the proximal augmented nlp block `nlp`.
 # Arguments
 - `nlp::ProxAugmentedNLPBlockModel`: the subproblem 
 - `ρ::Number`: vector of dual variables
 """
-function update_ρ!(nlp::ProxAugmentedNLPBlockModel, ρ::Number)
+function update_rho!(nlp::ProxAugmentedNLPBlockModel, ρ::Number)
     nlp.ρ = ρ
 end
 
