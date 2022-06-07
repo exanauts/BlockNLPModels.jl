@@ -77,12 +77,12 @@ end
 
 """
     update_primal!(
-      nlp::AugmentedNLPBlockModel, 
+      nlp::ProxAugmentedNLPBlockModel, 
       sol::AbstractVector
     )
 Updates the primal solution estimate for the augmented nlp block `nlp`.
 # Arguments
-- `nlp::AugmentedNLPBlockModel`: the subproblem 
+- `nlp::ProxAugmentedNLPBlockModel`: the subproblem 
 - `sol::AbstractVector`: vector of primal variables
 """
 function update_primal!(nlp::ProxAugmentedNLPBlockModel, sol::AbstractVector)
@@ -92,16 +92,30 @@ end
 
 """
     update_dual!(
-      nlp::AugmentedNLPBlockModel, 
+      nlp::ProxAugmentedNLPBlockModel, 
       λ::AbstractVector, 
     )
 Updates the dual solution estimate in-place for the augmented nlp block `nlp`.
 # Arguments
-- `nlp::AugmentedNLPBlockModel`: the subproblem 
+- `nlp::ProxAugmentedNLPBlockModel`: the subproblem 
 - `λ::AbstractVector`: vector of dual variables
 """
 function update_dual!(nlp::ProxAugmentedNLPBlockModel, λ::AbstractVector)
     nlp.λ .= λ
+end
+
+"""
+    update_ρ!(
+      nlp::ProxAugmentedNLPBlockModel, 
+      ρ::Number, 
+    )
+Updates the dual solution estimate in-place for the augmented nlp block `nlp`.
+# Arguments
+- `nlp::ProxAugmentedNLPBlockModel`: the subproblem 
+- `ρ::Number`: vector of dual variables
+"""
+function update_ρ!(nlp::ProxAugmentedNLPBlockModel, ρ::Number)
+    nlp.ρ = ρ
 end
 
 function NLPModels.obj(nlp::ProxAugmentedNLPBlockModel, x::AbstractVector)
