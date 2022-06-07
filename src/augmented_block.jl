@@ -90,6 +90,20 @@ function update_dual!(nlp::AugmentedNLPBlockModel, λ::AbstractVector)
     nlp.λ .= λ
 end
 
+"""
+    update_rho!(
+      nlp::AugmentedNLPBlockModel, 
+      ρ::Number, 
+    )
+Updates the penalty parameter in-place for the augmented nlp block `nlp`.
+# Arguments
+- `nlp::AugmentedNLPBlockModel`: the subproblem 
+- `ρ::Number`: vector of dual variables
+"""
+function update_rho!(nlp::AugmentedNLPBlockModel, ρ::Number)
+    nlp.ρ = ρ
+end
+
 function NLPModels.obj(nlp::AugmentedNLPBlockModel, x::AbstractVector)
     nlp.sol[nlp.subproblem.var_idx] = x
 
