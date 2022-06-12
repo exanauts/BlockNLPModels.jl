@@ -142,12 +142,10 @@ function add_block(block_nlp::AbstractBlockNLPModel, nlp::AbstractNLPModel)
 end
 
 """
-    add_links(
-      block_nlp::AbstractBlockNLPModel,
-      n_constraints::Int,
-      links::Union{Dict{Int, Array{Float64, 2}}, Dict{Int, Vector{Float64}}},
-      constants::Union{AbstractVector, Float64}
-    )
+    add_links(block_nlp::AbstractBlockNLPModel, n_constraints::Int,
+        links::Dict{Int, M},
+        constants::Union{AbstractVector, Float64},
+    ) where M <: AbstractMatrix{Float64}
 
 Creates linear link constraint(s) between different subproblems of the BlockNLPModel.
 This function must be called after subproblems have already been added.
@@ -158,11 +156,11 @@ This function must be called after subproblems have already been added.
 - `n_constraints::Int`: Number of link constraints.
 - `links::Union{Dict{Int, Array{Float64, 2}}, Dict{Int, Vector{Float64}}}`: coefficients of the block matrices that link different blocks,
 - `constants::Union{AbstractVector, Float64}`: RHS vector
-"""
+    """
 function add_links(block_nlp::AbstractBlockNLPModel, n_constraints::Int,
-    links::Union{Dict{Int, Array{Float64, 2}}, Dict{Int, Vector{Float64}}},
+    links::Dict{Int, M},
     constants::Union{AbstractVector, Float64},
-)
+) where M <: AbstractMatrix{Float64}
 
     # Initialize linking_blocks with empty matrices
     linking_blocks = [spzeros(n_constraints, block_nlp.blocks[i].meta.nvar)
@@ -170,19 +168,11 @@ function add_links(block_nlp::AbstractBlockNLPModel, n_constraints::Int,
 
     # check if everything is of appropriate size and add to linking_blocks
     @assert length(constants) == n_constraints
-    if n_constraints == 1
-        rhs_vector = [constants]
-        for block_idx in keys(links)
-            @assert length(links[block_idx]) == block_nlp.blocks[block_idx].meta.nvar
-            linking_blocks[block_idx][1, :] = sparse(links[block_idx])
-        end
-    else
-        rhs_vector = constants
-        for block_idx in keys(links)
-            @assert size(links[block_idx])[1] == n_constraints
-            @assert size(links[block_idx])[2] == block_nlp.blocks[block_idx].meta.nvar
-            linking_blocks[block_idx] = sparse(links[block_idx])
-        end
+    rhs_vector = constants
+    for block_idx in keys(links)
+        @assert size(links[block_idx])[1] == n_constraints
+        @assert size(links[block_idx])[2] == block_nlp.blocks[block_idx].meta.nvar
+        linking_blocks[block_idx] = sparse(links[block_idx])
     end
 
     # Prepare other information
@@ -204,6 +194,15 @@ function add_links(block_nlp::AbstractBlockNLPModel, n_constraints::Int,
     link_con_idx = temp_link_counter:block_nlp.problem_size.link_counter
     lin_link_con = LinearLinkConstraint(linking_blocks, link_con_idx, link_map, rhs_vector)
     push!(block_nlp.linking_constraints, lin_link_con)
+end
+
+# Special treatment for single constraint case 
+function add_links(
+    block_nlp::AbstractBlockNLPModel, n_constraints::Int,
+    links::Dict{Int, M},
+    constants::Float64,
+    ) where M <: AbstractVector{Float64}
+    add_links(block_nlp,n_constraints,Dict(Matrix(link') for link in links),constants)
 end
 
 include("full_space.jl")
