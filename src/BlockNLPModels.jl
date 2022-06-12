@@ -202,7 +202,7 @@ function add_links(
     links::Dict{Int, M},
     constants::Float64,
     ) where M <: AbstractVector{Float64}
-    add_links(block_nlp,n_constraints,Dict(Matrix(link') for link in links),constants)
+    add_links(block_nlp,n_constraints,Dict(id=>Matrix(link') for (id,link) in links),[constants])
 end
 
 include("full_space.jl")
