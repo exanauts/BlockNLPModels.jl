@@ -156,7 +156,7 @@ This function must be called after subproblems have already been added.
 - `n_constraints::Int`: Number of link constraints.
 - `links::Union{Dict{Int, Array{Float64, 2}}, Dict{Int, Vector{Float64}}}`: coefficients of the block matrices that link different blocks,
 - `constants::Union{AbstractVector, Float64}`: RHS vector
-    """
+"""
 function add_links(block_nlp::AbstractBlockNLPModel, n_constraints::Int,
     links::Dict{Int, M},
     constants::Union{AbstractVector, Float64},
