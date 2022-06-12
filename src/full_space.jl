@@ -3,15 +3,17 @@
 
 A data type to store the full space `BlockNLPModel` as an `AbstractNLPModel`.
 """
-mutable struct FullSpaceModel{T, S} <: AbstractNLPModel{T, S}
-    meta::NLPModelMeta{T, S}
+mutable struct FullSpaceModel{T,S} <: AbstractNLPModel{T,S}
+    meta::NLPModelMeta{T,S}
     counters::Counters
     blocknlp::AbstractBlockNLPModel
 end
 
 """
     FullSpaceModel(
-        ::Type{T}, m::AbstractBlockNLPModel
+        m::AbstractBlockNLPModel
+        x0::Union{Vector{Float64}, Nothing} = nothing, 
+        y0::Union{Vector{Float64}, Nothing} = nothing 
     ) where {T}
 
 Converts a `BlockNLPModel` to a `AbstractNLPModel` that can be solved with any standard NLP solver.
@@ -19,14 +21,20 @@ Converts a `BlockNLPModel` to a `AbstractNLPModel` that can be solved with any s
 # Arguments
 
 - `m::AbstractBlockNLPModel`: name of the BlockNLPModel
+- `x0::Union{Vector{Float64}, Nothing}`: warm start primal solution
+- `y0::Union{Vector{Float64}, Nothing}`: warm start dual solution
 """
-function FullSpaceModel(m::AbstractBlockNLPModel)
+function FullSpaceModel(
+    m::AbstractBlockNLPModel;
+    x0::Union{Vector{Float64},Nothing} = nothing,
+    y0::Union{Vector{Float64},Nothing} = nothing,
+)
     nb = m.problem_size.block_counter
-    n_var = sum(m.blocks[i].meta.nvar for i in 1:nb)
+    n_var = sum(m.blocks[i].meta.nvar for i = 1:nb)
 
     l_con::Vector{Float64} = []
     u_con::Vector{Float64} = []
-    for i in 1:nb
+    for i = 1:nb
         if m.blocks[i].meta.ncon > 0
             l_con = vcat(l_con, m.blocks[i].meta.lcon)
             u_con = vcat(u_con, m.blocks[i].meta.ucon)
@@ -37,40 +45,58 @@ function FullSpaceModel(m::AbstractBlockNLPModel)
 
     l_var::Vector{Float64} = []
     u_var::Vector{Float64} = []
-    for i in 1:nb
+    for i = 1:nb
         l_var = vcat(l_var, m.blocks[i].meta.lvar)
         u_var = vcat(u_var, m.blocks[i].meta.uvar)
     end
+
+    isnothing(x0) && (x0 = NLPModels.get_x0(m))
+    isnothing(y0) && (y0 = NLPModels.get_y0(m))
+
     meta = NLPModelMeta(
-                        n_var,
-                        ncon = n_constraints(m),
-                        nnzh = sum(m.blocks[i].meta.nnzh for i in 1:nb),
-                        nnzj = sum(m.blocks[i].meta.nnzj for i in 1:nb) +
-                        nnz(get_linking_matrix(m)),
-                        x0 = zeros(Float64, n_var),
-                        lvar = l_var,
-                        uvar = u_var,
-                        lcon = l_con,
-                        ucon = u_con,
-                        minimize = true,
-                        name = "full_space",
-                       )
+        n_var,
+        ncon = n_constraints(m),
+        nnzh = sum(m.blocks[i].meta.nnzh for i = 1:nb),
+        nnzj = sum(m.blocks[i].meta.nnzj for i = 1:nb) + nnz(get_linking_matrix(m)),
+        x0 = x0,
+        y0 = y0,
+        lvar = l_var,
+        uvar = u_var,
+        lcon = l_con,
+        ucon = u_con,
+        minimize = true,
+        name = "full_space",
+    )
     return FullSpaceModel(meta, Counters(), m)
+end
+
+function NLPModels.get_x0(m::AbstractBlockNLPModel)
+    nb = m.problem_size.block_counter
+    x0 = [NLPModels.get_x0(m.blocks[i]) for i = 1:nb]
+    return x0 = reduce(vcat, x0)
+end
+
+function NLPModels.get_y0(m::AbstractBlockNLPModel)
+    nb = m.problem_size.block_counter
+    y0 = [NLPModels.get_y0(m.blocks[i]) for i = 1:nb]
+    return y0 = reduce(vcat, push!(y0, zeros(Float64, m.problem_size.link_counter)))
 end
 
 function NLPModels.obj(nlp::FullSpaceModel, x::AbstractVector)
     nb = nlp.blocknlp.problem_size.block_counter
     @lencheck nlp.meta.nvar x
     increment!(nlp, :neval_obj)
-    return sum(obj(nlp.blocknlp.blocks[i].problem_block,
-                   x[nlp.blocknlp.blocks[i].var_idx]) for i in 1:nb)
+    return sum(
+        obj(nlp.blocknlp.blocks[i].problem_block, x[nlp.blocknlp.blocks[i].var_idx]) for
+        i = 1:nb
+    )
 end
 
 function NLPModels.grad!(nlp::FullSpaceModel, x::AbstractVector, gx::AbstractVector)
     nb = nlp.blocknlp.problem_size.block_counter
     @lencheck nlp.meta.nvar x gx
     increment!(nlp, :neval_grad)
-    for i in 1:nb
+    for i = 1:nb
         v = @view gx[nlp.blocknlp.blocks[i].var_idx]
         grad!(nlp.blocknlp.blocks[i].problem_block, x[nlp.blocknlp.blocks[i].var_idx], v)
     end
@@ -80,14 +106,14 @@ end
 function NLPModels.hess_structure!(
     nlp::FullSpaceModel,
     rows::AbstractVector{T},
-    cols::AbstractVector{T}
+    cols::AbstractVector{T},
 ) where {T}
     nb = nlp.blocknlp.problem_size.block_counter
     @lencheck nlp.meta.nnzh rows cols
     idx = 0
-    for i in 1:nb
+    for i = 1:nb
         block = nlp.blocknlp.blocks[i]
-        temp_idx = idx+1
+        temp_idx = idx + 1
         idx += block.meta.nnzh
         v1 = @view rows[temp_idx:idx]
         v2 = @view cols[temp_idx:idx]
@@ -99,19 +125,19 @@ function NLPModels.hess_structure!(
 end
 
 function NLPModels.hess_coord!(
-        nlp::FullSpaceModel,
-        x::AbstractVector{T},
-        vals::AbstractVector{T};
-        obj_weight = one(T),
+    nlp::FullSpaceModel,
+    x::AbstractVector{T},
+    vals::AbstractVector{T};
+    obj_weight = one(T),
 ) where {T}
     nb = nlp.blocknlp.problem_size.block_counter
     @lencheck nlp.meta.nvar x
     @lencheck nlp.meta.nnzh vals
     increment!(nlp, :neval_hess)
     idx = 0
-    for i in 1:nb
+    for i = 1:nb
         block = nlp.blocknlp.blocks[i]
-        temp_idx = idx+1
+        temp_idx = idx + 1
         idx += block.meta.nnzh
         v = @view vals[temp_idx:idx]
         hess_coord!(block.problem_block, x[block.var_idx], v, obj_weight = obj_weight)
@@ -120,11 +146,11 @@ function NLPModels.hess_coord!(
 end
 
 function NLPModels.hess_coord!(
-        nlp::FullSpaceModel,
-        x::AbstractVector{T},
-        y::AbstractVector{T},
-        vals::AbstractVector{T};
-        obj_weight = one(T),
+    nlp::FullSpaceModel,
+    x::AbstractVector{T},
+    y::AbstractVector{T},
+    vals::AbstractVector{T};
+    obj_weight = one(T),
 ) where {T}
     nb = nlp.blocknlp.problem_size.block_counter
     @lencheck nlp.meta.nvar x
@@ -132,18 +158,24 @@ function NLPModels.hess_coord!(
     @lencheck nlp.meta.ncon y
     increment!(nlp, :neval_hess)
     idx = 0
-    for i in 1:nb
+    for i = 1:nb
         block = nlp.blocknlp.blocks[i]
         if block.meta.ncon == 0
-            temp_idx = idx+1
+            temp_idx = idx + 1
             idx += block.meta.nnzh
             v = @view vals[temp_idx:idx]
             hess_coord!(block.problem_block, x[block.var_idx], v, obj_weight = obj_weight)
         else
-            temp_idx = idx+1
+            temp_idx = idx + 1
             idx += block.meta.nnzh
             v = @view vals[temp_idx:idx]
-            hess_coord!(block.problem_block, x[block.var_idx], y[block.con_idx], v, obj_weight = obj_weight)
+            hess_coord!(
+                block.problem_block,
+                x[block.var_idx],
+                y[block.con_idx],
+                v,
+                obj_weight = obj_weight,
+            )
         end
     end
     return vals
@@ -155,31 +187,36 @@ function NLPModels.cons!(nlp::FullSpaceModel, x::AbstractVector, cx::AbstractVec
     @lencheck nlp.meta.ncon cx
     increment!(nlp, :neval_cons)
     idx = 0
-    for i in 1:nb
+    for i = 1:nb
         if nlp.blocknlp.blocks[i].meta.ncon > 0
-            temp_idx = idx+1
+            temp_idx = idx + 1
             idx += nlp.blocknlp.blocks[i].meta.ncon
             v = @view cx[temp_idx:idx]
-            cons!(nlp.blocknlp.blocks[i].problem_block,
-                  x[nlp.blocknlp.blocks[i].var_idx], v)
+            cons!(
+                nlp.blocknlp.blocks[i].problem_block,
+                x[nlp.blocknlp.blocks[i].var_idx],
+                v,
+            )
         end
     end
     idx += 1
     A = get_linking_matrix_blocks(nlp.blocknlp)
-    cx[idx:end] .= sum(A[j]*x[nlp.blocknlp.blocks[j].var_idx] for j = 1:nb)
+    cx[idx:end] .= sum(A[j] * x[nlp.blocknlp.blocks[j].var_idx] for j = 1:nb)
     return cx
 end
 
-function NLPModels.jac_structure!(nlp::FullSpaceModel, rows::AbstractVector{T},
+function NLPModels.jac_structure!(
+    nlp::FullSpaceModel,
+    rows::AbstractVector{T},
     cols::AbstractVector{T},
 ) where {T}
     @lencheck nlp.meta.nnzj rows cols
     nb = nlp.blocknlp.problem_size.block_counter
     idx = 0
-    for i in 1:nb
+    for i = 1:nb
         block = nlp.blocknlp.blocks[i]
         if block.meta.ncon > 0
-            temp_idx = idx+1
+            temp_idx = idx + 1
             idx += block.meta.nnzj
             v1 = @view rows[temp_idx:idx]
             v2 = @view cols[temp_idx:idx]
@@ -200,10 +237,10 @@ function NLPModels.jac_coord!(nlp::FullSpaceModel, x::AbstractVector, vals::Abst
     increment!(nlp, :neval_jac)
     nb = nlp.blocknlp.problem_size.block_counter
     idx = 0
-    for i in 1:nb
+    for i = 1:nb
         block = nlp.blocknlp.blocks[i]
         if block.meta.ncon > 0
-            temp_idx = idx+1
+            temp_idx = idx + 1
             idx += block.meta.nnzj
             v1 = @view vals[temp_idx:idx]
             jac_coord!(block.problem_block, x[block.var_idx], v1)
@@ -214,4 +251,3 @@ function NLPModels.jac_coord!(nlp::FullSpaceModel, x::AbstractVector, vals::Abst
     vals[idx+1:nlp.meta.nnzj] .= v # for madnlp
     return vals
 end
-
