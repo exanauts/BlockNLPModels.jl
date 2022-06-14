@@ -5,14 +5,14 @@
 This package provides a modeling framework based on [NLPModels.jl](https://github.com/JuliaSmoothOptimizers/NLPModels.jl) for block structured nonlinear optimization problems (NLPs) in Julia. Specifically, one can use this package to model NLPs of the following form:
 
 $$
-\begin{aligned}
-  \min_{x \in \mathbb{R^{m_i}}} \quad & \sum\limits_{i \in \mathcal{B}} f_i(x_i) \\
-  \mathrm{subject \, to} \quad & c_{ij} (x_i) \leq 0 \quad \forall \, i \in \mathcal{B}, j \in \mathcal{C}_i \\
-  & \sum\limits_{i \in \mathcal{B}} A_i x_i = b,
-\end{aligned}
+\begin{array}{ll}
+  \displaystyle \mathop{\mathrm{minimize}}\limits_{x}  & \displaystyle \sum\limits_{i \in B} f_i(x_i) \\
+  \displaystyle \mathrm{subject\ to} & \displaystyle x_i \in X_i := \left\\{x_i \in \mathbb{R}^{m_i}: c_{ij} (x) = 0, \ j \in E_i, \ c_{ij}(x) \geq 0, \ j \in I_i \right\\}, \ \ i \in B, \\
+  & \displaystyle \sum_{i \in B} A_i x_i = b,
+\end{array}
 $$
 
-where $\mathcal{B}$ is the set of variable blocks and $\mathcal{C}_i$ is the set of constraints for block $i$. Functions $f_i$ and $c_{ij}$ are assumed to be generally nonlinear noconvex functions of variables assosciated with the block $i$. Further, we assume that the constraints linking the NLP blocks in set $\mathcal{B}$ are linear in the decision variables.
+where $B$ is the set of variable blocks, $X_i$ is the domain of the $i^\mathrm{th}$ variable block $x_i$ consisting of a set $E_i$ of equality constraints, and a set $I_i$ of inequality constraints. All functions $f_i$ and $c_{ij}$ are assumed to be smooth, real-valued functions that can be nonlinear and noconvex. Note that the constraints linking the variable blocks must be linear.
 
 In this package, block structured NLPs of the above form are represented by an instance of `AbstractBlockNLPModel`.
 
@@ -31,14 +31,16 @@ The test code generates and solves a small instance of a `BlockNLPModel` using t
 
 ## Quickstart Guide
 Suppose we want to model the following NLP that can be decomposed into three univariate blocks:
+
 $$
-\begin{aligned}
-  \min_{x \in \mathbb{R}_+} \quad & \sum\limits_{i \in \{ 1, 2, 3 \}} (x_i - a_i)^2 \\
-  \mathrm{subject \, to} \quad & x_i \leq 1 \quad \forall \, i \in \{ 1, 2, 3 \} \\
-  & \sum\limits_{i \in \{ 1, 2, 3 \}} x_i = b,
-\end{aligned}
+\begin{array}{ll}
+  \displaystyle \mathop{\mathrm{minimize}}\limits_{x_1, x_2, x_3} & \displaystyle \sum\limits_{i=1}^3 (x_i - a_i)^2 \\
+  \displaystyle \mathrm{subject\ to} & \displaystyle 0 \leq x_i \leq 1, \ \ i \in \\{ 1, 2, 3 \\} \\
+  & \displaystyle \sum\limits_{i=1}^3 x_i = b,
+\end{array}
 $$
-where $a_i$ for all i and b are some constants.
+
+where $a_1, a_2, a_3$ and $b$ are some scalar constants.
 
 We start by initializing an empty `BlockNLPModel`:
 
