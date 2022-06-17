@@ -24,6 +24,7 @@ end
         b::AbstractVector,
         sol::AbstractVector
     )
+
 Modifies a subproblem by penalizing and dualizing the linking constraints.
 
 # Arguments
@@ -62,13 +63,14 @@ end
 
 """
     update_primal!(
-      nlp::AugmentedNLPBlockModel, 
-      sol::AbstractVector
+        nlp::AugmentedNLPBlockModel,
+        sol::AbstractVector
     )
+
 Updates the primal solution estimate for the augmented nlp block `nlp`.
 
 # Arguments
-- `nlp::AugmentedNLPBlockModel`: the subproblem 
+- `nlp::AugmentedNLPBlockModel`: the subproblem
 - `sol::AbstractVector`: vector of primal variables
 """
 function update_primal!(nlp::AugmentedNLPBlockModel, sol::AbstractVector)
@@ -77,13 +79,14 @@ end
 
 """
     update_dual!(
-      nlp::AugmentedNLPBlockModel, 
-      λ::AbstractVector, 
+      nlp::AugmentedNLPBlockModel,
+      λ::AbstractVector,
     )
+
 Updates the dual solution estimate in-place for the augmented nlp block `nlp`.
 
 # Arguments
-- `nlp::AugmentedNLPBlockModel`: the subproblem 
+- `nlp::AugmentedNLPBlockModel`: the subproblem
 - `λ::AbstractVector`: vector of dual variables
 """
 function update_dual!(nlp::AugmentedNLPBlockModel, λ::AbstractVector)
@@ -92,12 +95,13 @@ end
 
 """
     update_rho!(
-      nlp::AugmentedNLPBlockModel, 
-      ρ::Number, 
+      nlp::AugmentedNLPBlockModel,
+      ρ::Number,
     )
+
 Updates the penalty parameter in-place for the augmented nlp block `nlp`.
 # Arguments
-- `nlp::AugmentedNLPBlockModel`: the subproblem 
+- `nlp::AugmentedNLPBlockModel`: the subproblem
 - `ρ::Number`: vector of dual variables
 """
 function update_rho!(nlp::AugmentedNLPBlockModel, ρ::Number)

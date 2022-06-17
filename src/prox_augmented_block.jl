@@ -1,5 +1,6 @@
 """
     ProxAugmentedNLPBlockModel{T, S} <: AbstractNLPModel{T, S}
+
 A data type to store augmented subproblems.
 """
 mutable struct ProxAugmentedNLPBlockModel{T,S} <: AbstractNLPModel{T,S}
@@ -26,7 +27,9 @@ end
         sol::AbstractVector,
         P::AbstractMatrix
     )
+
 Modifies a subproblem by penalizing and dualizing the linking constraints.
+
 # Arguments
 - `nlp::AbstractNLPModel`: the subproblem
 - `λ::AbstractVector`: vector of dual variables
@@ -77,12 +80,14 @@ end
 
 """
     update_primal!(
-      nlp::ProxAugmentedNLPBlockModel, 
-      sol::AbstractVector
+        nlp::ProxAugmentedNLPBlockModel,
+        sol::AbstractVector
     )
+
 Updates the primal solution estimate for the augmented nlp block `nlp`.
+
 # Arguments
-- `nlp::ProxAugmentedNLPBlockModel`: the subproblem 
+- `nlp::ProxAugmentedNLPBlockModel`: the subproblem
 - `sol::AbstractVector`: vector of primal variables
 """
 function update_primal!(nlp::ProxAugmentedNLPBlockModel, sol::AbstractVector)
@@ -92,12 +97,13 @@ end
 
 """
     update_dual!(
-      nlp::ProxAugmentedNLPBlockModel, 
-      λ::AbstractVector, 
+        nlp::ProxAugmentedNLPBlockModel,
+        λ::AbstractVector,
     )
+
 Updates the dual solution estimate in-place for the augmented nlp block `nlp`.
 # Arguments
-- `nlp::ProxAugmentedNLPBlockModel`: the subproblem 
+- `nlp::ProxAugmentedNLPBlockModel`: the subproblem
 - `λ::AbstractVector`: vector of dual variables
 """
 function update_dual!(nlp::ProxAugmentedNLPBlockModel, λ::AbstractVector)
@@ -106,12 +112,14 @@ end
 
 """
     update_rho!(
-      nlp::ProxAugmentedNLPBlockModel, 
-      ρ::Number, 
+        nlp::ProxAugmentedNLPBlockModel,
+        ρ::Number,
     )
+
 Updates the penalty parameter in-place for the proximal augmented nlp block `nlp`.
+
 # Arguments
-- `nlp::ProxAugmentedNLPBlockModel`: the subproblem 
+- `nlp::ProxAugmentedNLPBlockModel`: the subproblem
 - `ρ::Number`: vector of dual variables
 """
 function update_rho!(nlp::ProxAugmentedNLPBlockModel, ρ::Number)
