@@ -1,7 +1,7 @@
 """
-  get_linking_matrix(
-    m::AbstractBlockNLPModel 
-  )
+    get_linking_matrix(
+        m::AbstractBlockNLPModel,
+    )
 
 Returns the concatenated linking matrix ``A = [A_1, \\ldots, A_B]``
 
@@ -12,8 +12,8 @@ Returns the concatenated linking matrix ``A = [A_1, \\ldots, A_B]``
 function get_linking_matrix(m::AbstractBlockNLPModel)
     nb = m.problem_size.block_counter
     A = spzeros(m.problem_size.link_counter, m.problem_size.var_counter)
-    for i = 1:nb
-        for j = 1:length(m.linking_constraints)
+    for i in 1:nb
+        for j in 1:length(m.linking_constraints)
             A[m.linking_constraints[j].idx, m.blocks[i].var_idx] =
                 m.linking_constraints[j].linking_blocks[i]
         end
@@ -22,9 +22,9 @@ function get_linking_matrix(m::AbstractBlockNLPModel)
 end
 
 """
-  get_linking_matrix_blocks(
-    m::AbstractBlockNLPModel 
-  )
+    get_linking_matrix_blocks(
+        m::AbstractBlockNLPModel
+    )
 
 Returns a vector of linking matrix blocks ``[A_1, \\ldots, A_B]``
 
@@ -46,7 +46,7 @@ end
 
 """
     get_rhs_vector(
-        m::AbstractBlockNLPModel 
+        m::AbstractBlockNLPModel
     )
 
 Returns the concatenated RHS vector for all the linking constraints ``b``.
@@ -65,7 +65,7 @@ end
 
 """
     n_constraints(
-        m::AbstractBlockNLPModel 
+        m::AbstractBlockNLPModel
     )
 
 Returns the total number of constraints in a BlockNLPModel.
@@ -80,8 +80,8 @@ end
 
 """
     update_nnzh(
-        meta::NLPModelMeta, 
-        new_nnzh::Int 
+        meta::NLPModelMeta,
+        new_nnzh::Int
     )
 
 Updates the nnzh field of NLPModelMeta.
@@ -143,7 +143,7 @@ end
         obj_weight::Number;
         y::Union{AbstractVector, Nothing} = nothing,
     )
-    
+
 Returns the Hessian for an augmented subproblem as a sparse matrix.
 
 # Arguments
@@ -196,7 +196,7 @@ function get_augmented_hessian_coord!(
             vals[main_idx] = aug_term[3][sub_idx2]
             main_idx += 1
             sub_idx2 += 1
-        else # To-Do: probably not required, check and remove.
+        else # TODO: probably not required, check and remove.
             vals[main_idx] = 0.0
             main_idx += 1
         end

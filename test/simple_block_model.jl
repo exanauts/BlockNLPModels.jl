@@ -10,7 +10,7 @@ for i = 1:B
     @objective(model, Min, (x - T[i])^2)
     @constraint(model, x <= 1)
     nlp = MathOptNLPModel(model)
-    add_block(block_model, nlp)
+    add_block!(block_model, nlp)
 end
 A = ones(Float64, B)
 b = rand(rng, 50*B:100*B) / 100
@@ -19,7 +19,7 @@ links = Dict(1 => [A[1]])
 for i = 2:B
     links[i] = sparse([A[i]])
 end
-add_links(block_model, 1, links, b)
+add_links!(block_model, 1, links, b)
 
 @testset "Testing counters" begin
     @test block_model.problem_size.block_counter ≈ B

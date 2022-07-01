@@ -10,8 +10,8 @@ export DualizedNLPBlockModel
 export AugmentedNLPBlockModel
 export FullSpaceModel
 export ProxAugmentedNLPBlockModel
-export add_block,
-    add_links,
+export add_block!,
+    add_links!,
     n_constraints,
     get_linking_matrix,
     get_linking_matrix_blocks,
@@ -22,20 +22,17 @@ export add_block,
 
 """
     AbstractBlockNLPModel
+
 Abstract supertype for the definition of NLP problems with a block structure.
 """
 abstract type AbstractBlockNLPModel end
 
 """
     AbstractLinearLinkConstraint
-Abstract supertype for the definition of linear linking constraints
+
+Abstract supertype for the definition of linking constraints
 """
-abstract type AbstractLinearLinkConstraint end
-"""
-    AbstractNonLinearLinkConstraint
-Abstract supertype for the definition of nonlinear linking constraints
-"""
-abstract type AbstractNonLinearLinkConstraint end
+abstract type AbstractLinkConstraint end
 
 """
     BlockNLPCounters()
@@ -73,14 +70,15 @@ end
 
 
 """
-    LinearLinkConstraint <: AbstractLinearLinkConstraint
+    LinearLinkConstraint <: AbstractLinkConstraint
+
 A data type to store linear link constraints of the form
 ```math
 \\begin{aligned}
   \\sum\\limits_{i \\in \\mathcal{B}} A_i x_i = b
 \\end{aligned}
 """
-mutable struct LinearLinkConstraint <: AbstractLinearLinkConstraint
+mutable struct LinearLinkConstraint <: AbstractLinkConstraint
     linking_blocks::Vector{SparseMatrixCSC{Float64,Int}}
     idx::UnitRange{Int}
     link_map::Dict{Int,Vector{Int}} # constraint => blocks, i.e., which constraint connects which blocks
@@ -89,6 +87,7 @@ end
 
 """
     BlockNLPModel <: AbstractBlockNLPModel
+
 A data type designed to store nonlinear optimization models of the form
 ```math
 \\begin{aligned}
@@ -107,22 +106,20 @@ Initializes an empty `BlockNLPModel`.
 mutable struct BlockNLPModel <: AbstractBlockNLPModel
     problem_size::BlockNLPCounters
     blocks::Vector{AbstractBlockModel}
-    linking_constraints::Vector{
-        Union{AbstractLinearLinkConstraint,AbstractNonLinearLinkConstraint},
-    }
+    linking_constraints::Vector{AbstractLinkConstraint}
     function BlockNLPModel()
         return new(
             BlockNLPCounters(),
             Vector{AbstractBlockModel}(),
-            Vector{Union{AbstractLinearLinkConstraint,AbstractNonLinearLinkConstraint}}(),
+            Vector{AbstractLinkConstraint}(),
         )
     end
 end
 
 """
-    add_block(
-     block_nlp::AbstractBlockNLPModel,
-     nlp::AbstractNLPModel
+    add_block!(
+        block_nlp::AbstractBlockNLPModel,
+        nlp::AbstractNLPModel
     )
 
 Adds a block subproblem to a `BlockNLPModel`.
@@ -133,7 +130,7 @@ The `BlockNLPModel` needs to be initialized before this function can be called.
 - `block_nlp::AbstractBlockNLPModel`: name of the BlockNLPModel to which a subproblem is to be added.
 - `nlp::AbstractNLPModel`: the subproblem.
 """
-function add_block(block_nlp::AbstractBlockNLPModel, nlp::AbstractNLPModel)
+function add_block!(block_nlp::AbstractBlockNLPModel, nlp::AbstractNLPModel)
     block_nlp.problem_size.block_counter += 1
 
     temp_var_counter = block_nlp.problem_size.var_counter + 1
@@ -159,7 +156,7 @@ function add_block(block_nlp::AbstractBlockNLPModel, nlp::AbstractNLPModel)
 end
 
 """
-    add_links(block_nlp::AbstractBlockNLPModel, n_constraints::Int,
+    add_links!(block_nlp::AbstractBlockNLPModel, n_constraints::Int,
         links::Dict{Int, M},
         constants::Union{AbstractVector, Float64},
     ) where M <: AbstractMatrix{Float64}
@@ -174,7 +171,7 @@ This function must be called after subproblems have already been added.
 - `links::Union{Dict{Int, Array{Float64, 2}}, Dict{Int, Vector{Float64}}}`: coefficients of the block matrices that link different blocks,
 - `constants::Union{AbstractVector, Float64}`: RHS vector
 """
-function add_links(
+function add_links!(
     block_nlp::AbstractBlockNLPModel,
     n_constraints::Int,
     links::Dict{Int, M},
@@ -220,13 +217,13 @@ function add_links(
     lin_link_con = LinearLinkConstraint(linking_blocks, link_con_idx, link_map, rhs_vector)
     push!(block_nlp.linking_constraints, lin_link_con)
 end
-# Special treatment for single constraint case 
-function add_links(
+# Special treatment for single constraint case
+function add_links!(
     block_nlp::AbstractBlockNLPModel, n_constraints::Int,
     links::Dict{Int, M},
     constants::Float64,
     ) where M <: AbstractVector{Float64}
-    add_links(block_nlp,n_constraints,Dict(id=>Matrix(link') for (id,link) in links),[constants])
+    add_links!(block_nlp,n_constraints,Dict(id=>Matrix(link') for (id,link) in links),[constants])
 end
 
 include("utils.jl")
@@ -234,4 +231,5 @@ include("full_space.jl")
 include("dualized_block.jl")
 include("augmented_block.jl")
 include("prox_augmented_block.jl")
+
 end # module

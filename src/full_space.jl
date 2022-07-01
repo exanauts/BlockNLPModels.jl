@@ -12,8 +12,8 @@ end
 """
     FullSpaceModel(
         m::AbstractBlockNLPModel
-        x0::Union{Vector{Float64}, Nothing} = nothing, 
-        y0::Union{Vector{Float64}, Nothing} = nothing 
+        x0::Union{Vector{Float64}, Nothing} = nothing,
+        y0::Union{Vector{Float64}, Nothing} = nothing
     ) where {T}
 
 Converts a `BlockNLPModel` to a `AbstractNLPModel` that can be solved with any standard NLP solver.
