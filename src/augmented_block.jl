@@ -42,9 +42,7 @@ function AugmentedNLPBlockModel(
     b::AbstractVector,
     sol::AbstractVector,
 )
-
     ATA = findnz(ρ .* A[:, nlp.var_idx]' * A[:, nlp.var_idx])
-
     block_hess_struct = hess_structure(nlp.problem_block)
     I = vcat(block_hess_struct[1], ATA[1])
     J = vcat(block_hess_struct[2], ATA[2])

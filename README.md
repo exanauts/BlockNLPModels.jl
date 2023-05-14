@@ -38,7 +38,7 @@ $$
   & \sum\limits_{i \in \{ 1, 2, 3 \}} x_i = b,
 \end{aligned}
 $$
-where $a_i$ for all i and b are some constants.
+where $a_i$ for all $i$ and $b$ are some constants.
 
 We start by initializing an empty `BlockNLPModel`:
 
@@ -46,7 +46,7 @@ We start by initializing an empty `BlockNLPModel`:
 blocknlp = BlockNLPModel()
 ```
 
-Next, we add the NLP blocks to `blocknlp`. For this step, the subproblems need to be made available as `AbstractNLPModel` objects. Assuming that `nlp_blocks` is a 3-element vector containing the three NLP blocks of our example above, we add these blocks to `blocknlp` by using the `add_block` function as follows:
+Next, we add the three NLP blocks to `blocknlp`. For this step, the subproblems need to be made available as `AbstractNLPModel` objects. Assuming that `nlp_blocks` is a 3-element vector containing the three NLP blocks of our example above, we add these blocks to `blocknlp` by using the `add_block` function as follows:
 
 ```julia
 for i in 1:3
