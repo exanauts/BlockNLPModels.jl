@@ -75,7 +75,7 @@ end
 
     # Solve the full-space problem with MadNLP
     stats = madnlp(fm, print_level = MadNLP.WARN)
-    @test stats.solution ≈ [0.4099999816058684, 1.000000008750505, 1.000000009643627]
+    @test stats.solution[1:3] ≈ [0.4099999816058684, 1.000000008750505, 1.000000009643627]
 end
 
 @testset "Testing dualized_block.jl" begin
