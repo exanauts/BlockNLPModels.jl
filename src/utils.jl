@@ -176,6 +176,7 @@ function get_augmented_hessian_coord!(
         blk_hess_values =
             hess_coord(nlp.subproblem.problem_block, x, obj_weight = obj_weight)
     end
+    # This needs fixing
     block_hessian_matrix = sparse(blk_hess[1], blk_hess[2], blk_hess_values, nlp.subproblem.problem_block.meta.nvar, nlp.subproblem.problem_block.meta.nvar)
     sorted_values = findnz(block_hessian_matrix)
     blk_hess1 = sorted_values[1]
