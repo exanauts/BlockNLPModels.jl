@@ -132,7 +132,7 @@ A data type to store information required to compute augmented hessian for a NLP
 """
 mutable struct AugmentedHessianInfo
     augmented_hessian_struct::Tuple{AbstractVector,AbstractVector}
-    block_hessian_struct::Tuple{AbstractVector,AbstractVector}
+    block_hessian_struct::Tuple{AbstractVector,AbstractVector,AbstractVector}
     ATA::Tuple{AbstractVector,AbstractVector,AbstractVector}
 end
 
@@ -148,6 +148,7 @@ Returns the Hessian for an augmented subproblem as a sparse matrix.
 
 # Arguments
 - `m::AbstractNLPModel`: the subproblem
+- `ρ::Number`: penalty coefficient
 - `x::Union{AbstractVector, Nothing}`: current primal solution (optional)
 - `obj_weight::Union{AbstractVector, Nothing}`: objective weight
 - `y::Union{AbstractVector, Nothing}`: vector of dual variables
@@ -162,12 +163,12 @@ function get_augmented_hessian_coord!(
     y::Union{AbstractVector,Nothing} = nothing,
 )
     # initialize vector indices
-    # main_idx = 1
-    # sub_idx1 = 1
-    # sub_idx2 = 1
+    main_idx = 1
+    sub_idx1 = 1
+    sub_idx2 = 1
 
     # assign pointers
-    # aug_hess = nlp.hess_info.augmented_hessian_struct
+    aug_hess = nlp.hess_info.augmented_hessian_struct
     blk_hess = nlp.hess_info.block_hessian_struct
     aug_term = nlp.hess_info.ATA
     if nlp.subproblem.meta.ncon > 0
@@ -177,48 +178,24 @@ function get_augmented_hessian_coord!(
         blk_hess_values =
             hess_coord(nlp.subproblem.problem_block, x, obj_weight = obj_weight)
     end
-    # This needs fixing
-    I = vcat(blk_hess[1], aug_term[1])
-    J = vcat(blk_hess[2], aug_term[2])
-    V = vcat(blk_hess_values, ρ*obj_weight .* aug_term[3])
-    aug_hess = findnz(sparse(I, J, V, nlp.meta.nvar, nlp.meta.nvar))
-    vals .= aug_hess[3]
-    # for (i, j) in zip(aug_hess[1], aug_hess[2])
-    #     # println(sub_idx1)
-    #     # println(sub_idx2)
-    #     if (
-    #         blk_hess1[sub_idx1] == i &&
-    #         blk_hess2[sub_idx1] == j &&
-    #         aug_term[1][sub_idx2] == i &&
-    #         aug_term[2][sub_idx2] == j
-    #     )
-    #         vals[main_idx] = blk_hess_values[sub_idx1] + aug_term[3][sub_idx2]
-    #         main_idx += 1
-    #         (sub_idx1 += 1)
-    #         (sub_idx2 += 1)
-    #         if length(aug_term[3]) < sub_idx2
-    #             sub_idx2 -= 1
-    #         end
-    #         if length(blk_hess_values) < sub_idx1
-    #             sub_idx1 -= 1
-    #         end
-    #     elseif (blk_hess1[sub_idx1] == i && blk_hess2[sub_idx1] == j)
-    #         vals[main_idx] = blk_hess_values[sub_idx1]
-    #         main_idx += 1
-    #         (sub_idx1 += 1)
-    #         if length(blk_hess_values) < sub_idx1
-    #             sub_idx1 -= 1
-    #         end
-    #     elseif (aug_term[1][sub_idx2] == i && aug_term[2][sub_idx2] == j)
-    #         vals[main_idx] = aug_term[3][sub_idx2]
-    #         main_idx += 1
-    #         (sub_idx2 += 1)
-    #         if length(aug_term[3]) < sub_idx2
-    #             sub_idx2 -= 1
-    #         end
-    #     else # To-Do: probably not required, check and remove.
-    #         vals[main_idx] = 0.0
-    #         main_idx += 1
-    #     end
-    # end
+    vals .= zeros(Float64, length(aug_hess[1]))
+    for (i, j) in zip(aug_hess[1], aug_hess[2])
+        while (
+            sub_idx1 <= length(blk_hess_values) &&
+            blk_hess[1][blk_hess[3][sub_idx1]] == i &&
+            blk_hess[2][blk_hess[3][sub_idx1]] == j
+        )
+            vals[main_idx] += blk_hess_values[blk_hess[3][sub_idx1]]
+            sub_idx1 += 1
+        end
+        while (
+            sub_idx2 <= length(aug_term[3]) &&
+            aug_term[1][sub_idx2] == i &&
+            aug_term[2][sub_idx2] == j
+        )
+            vals[main_idx] += ρ*obj_weight*aug_term[3][sub_idx2]
+            sub_idx2 += 1
+        end
+        main_idx += 1
+    end
 end

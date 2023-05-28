@@ -58,7 +58,7 @@ function AugmentedNLPBlockModel(
 
     hess_struct = AugmentedHessianInfo(
         (aug_hess_struct[1], aug_hess_struct[2]),
-        (block_hess_struct[1], block_hess_struct[2]),
+        (block_hess_struct[1], block_hess_struct[2], sortperm(block_hess_struct[1])),
         ATA,
     )
     return AugmentedNLPBlockModel(meta, Counters(), nlp, λ, ρ, A, b, deepcopy(sol), hess_struct)
