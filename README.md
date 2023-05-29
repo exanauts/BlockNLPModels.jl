@@ -48,17 +48,17 @@ We start by initializing an empty `BlockNLPModel`:
 blocknlp = BlockNLPModel()
 ```
 
-Next, we add the NLP blocks to `blocknlp`. For this step, the subproblems need to be made available as `AbstractNLPModel` objects. Assuming that `nlp_blocks` is a 3-element vector containing the three NLP blocks of our example above, we add these blocks to `blocknlp` by using the `add_block` function as follows:
+Next, we add the NLP blocks to `blocknlp`. For this step, the subproblems need to be made available as `AbstractNLPModel` objects. Assuming that `nlp_blocks` is a 3-element vector containing the three NLP blocks of our example above, we add these blocks to `blocknlp` by using the `add_block!` function as follows:
 
 ```julia
 for i in 1:3
-    add_block(blocknlp, nlp_blocks[i])
+    add_block!(blocknlp, nlp_blocks[i])
 end
 ```
 
-Once the blocks have been added the next step is to add the linking constraints. For this, we make use of the `add_links` method in this package. This is defined as follows:
+Once the blocks have been added the next step is to add the linking constraints. For this, we make use of the `add_links!` method in this package. This is defined as follows:
 
-`add_links(block_nlp_model, n_constraints, links, rhs_constants)`, where
+`add_links!(block_nlp_model, n_constraints, links, rhs_constants)`, where
 - `block_nlp_model` is an instance of `BlockNLPModel`
 - `n_constraints` is the number of linking constraints that are being added to `block_nlp_model`
 - `links` is a dictionary that specifies which block is being linked with what coefficients  
@@ -66,7 +66,7 @@ Once the blocks have been added the next step is to add the linking constraints.
 
 For our example above, we add the linking constraint as follows:
 ```julia
-add_links(blocknlp, 1, Dict(1 => [1.], 2 => [1.], 3 => [1.]), b)
+add_links!(blocknlp, 1, Dict(1 => [1.], 2 => [1.], 3 => [1.]), b)
 ```
 With this, we have finished modeling the above example as an `AbstractBlockNLPModel`.
 

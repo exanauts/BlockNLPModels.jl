@@ -43,8 +43,11 @@ function AugmentedNLPBlockModel(
     b::AbstractVector,
     sol::AbstractVector,
 )
-
-    ATA = findnz(ρ .* A[:, nlp.var_idx]' * A[:, nlp.var_idx])
+    if ρ != 0
+        ATA = findnz(A[:, nlp.var_idx]' * A[:, nlp.var_idx])
+    else
+        ATA = ([], [], [])
+    end
 
     block_hess_struct = hess_structure(nlp.problem_block)
     I = vcat(block_hess_struct[1], ATA[1])
@@ -55,7 +58,7 @@ function AugmentedNLPBlockModel(
 
     hess_struct = AugmentedHessianInfo(
         (aug_hess_struct[1], aug_hess_struct[2]),
-        (block_hess_struct[1], block_hess_struct[2]),
+        (block_hess_struct[1], block_hess_struct[2], sortperm(block_hess_struct[1])),
         ATA,
     )
     return AugmentedNLPBlockModel(meta, Counters(), nlp, λ, ρ, A, b, deepcopy(sol), hess_struct)
@@ -146,7 +149,7 @@ function NLPModels.hess_coord!(
     vals::AbstractVector{T};
     obj_weight = one(T),
 ) where {T}
-    get_augmented_hessian_coord!(nlp, x, vals, obj_weight)
+    get_augmented_hessian_coord!(nlp, nlp.ρ, x, vals, obj_weight)
     return vals
 end
 
@@ -157,7 +160,7 @@ function NLPModels.hess_coord!(
     vals::AbstractVector{T};
     obj_weight = one(T),
 ) where {T}
-    get_augmented_hessian_coord!(nlp, x, vals, obj_weight, y = y)
+    get_augmented_hessian_coord!(nlp, nlp.ρ, x, vals, obj_weight, y = y)
     return vals
 end
 

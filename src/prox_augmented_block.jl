@@ -48,7 +48,11 @@ function ProxAugmentedNLPBlockModel(
     sol::AbstractVector,
     P::AbstractMatrix,
 )
-    ATA = findnz(ρ .* A[:, nlp.var_idx]' * A[:, nlp.var_idx])
+    if ρ != 0
+        ATA = findnz(A[:, nlp.var_idx]' * A[:, nlp.var_idx])
+    else
+        ATA = ([], [], [])
+    end
     block_hess_struct = hess_structure(nlp.problem_block)
     P_triplets = findnz(P)
 
@@ -60,7 +64,7 @@ function ProxAugmentedNLPBlockModel(
 
     hess_struct = AugmentedHessianInfo(
         (prox_aug_hess_struct[1], prox_aug_hess_struct[2]),
-        (block_hess_struct[1], block_hess_struct[2]),
+        (block_hess_struct[1], block_hess_struct[2], sortperm(block_hess_struct[1])),
         ATA,
     )
     return ProxAugmentedNLPBlockModel(
@@ -173,7 +177,7 @@ function NLPModels.hess_coord!(
     vals::AbstractVector{T};
     obj_weight = one(T),
 ) where {T}
-    get_augmented_hessian_coord!(nlp, x, vals, obj_weight)
+    get_augmented_hessian_coord!(nlp, nlp.ρ, x, vals, obj_weight)
 
     aug_hess = nlp.hess_info.augmented_hessian_struct
     P_triplets = findnz(nlp.P)
@@ -197,7 +201,7 @@ function NLPModels.hess_coord!(
     vals::AbstractVector{T};
     obj_weight = one(T),
 ) where {T}
-    get_augmented_hessian_coord!(nlp, x, vals, obj_weight, y = y)
+    get_augmented_hessian_coord!(nlp, nlp.ρ, x, vals, obj_weight, y = y)
 
     aug_hess = nlp.hess_info.augmented_hessian_struct
     P_triplets = findnz(nlp.P)
